@@ -1,7 +1,8 @@
 function [nrp] = NRP_Setup()
 % nrp = visa('keysight',"USB::0x0aad::0x0145::102483::INSTR") % original
 % nrp = visa('keysight',"USB0::0x0AAD::0x0138::102270::0::INSTR")
-nrp = visa('keysight',"USB0::0x0AAD::0x0145::102483::0::INSTR")
+% nrp = visa('keysight',"USB0::0x0AAD::0x0145::102483::0::INSTR")
+nrp = visa('keysight',"USB0::0x0AAD::0x0180::102854::0::INSTR")
 
 fopen(nrp)
 fprintf(nrp, 'INIT:CONT OFF');

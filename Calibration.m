@@ -11,10 +11,10 @@ addpath(strcat(dirPath,'\Scripts'))
 
 
 %% Prepare Sweeps
-Fo = 5.6e9:0.2e9:12.4e9; %Center Frequency (Hz)
+Fo = 38e9:0.2e9:40e9; %Center Frequency (Hz)
 
 % THIS RANGE IS SOMETHING YOU NEED TO FIGURE OUT YOURSELF
-Pdes = -40:1:-40; %Power set on signal generator (dBm)
+Pdes = -42:1:-42; %Power set on signal generator (dBm)
 Pavs = repmat(Pdes, length(Fo), 1)'; % shaping
 
 %% Prepare Instruments
@@ -25,12 +25,23 @@ Drain1 = 2; %channel
 Gate2 = 3; %channel
 Drain2 = 4; %channel
 
-NRP = NRP_Setup() %Output Power Meter
-N6705A = N6705A_Setup(8,5) %DC Power Supply
+%% Using NRX for output
+%didnt work
+% NRP = NRP_Setup() %Output Power Meter
+% p = NRP_ReadPower(NRP, 40e9)
+% NRP_Close( NRP )
+
+nrp = NRP67T_Setup();
+% p = NRP67T_ReadPower(nrp,40e9)
+% NRP67T_Close(nrp)
+% N6705A = N6705A_Setup(8,5) %DC Power Supply
+%% 
 NRP_control = NRP_50SN_setup() % Control Input Power Meter
 
+%% Using SMW200A
 SMJ100A = SMJ100A_Setup(8,28) %Vector Signal Generator - control
 
+%%
 %% Prepare Engineering Datasets
 size_eng = [length(Pavs(:,1)), length(Pctrl_phaseOffset)];
 
