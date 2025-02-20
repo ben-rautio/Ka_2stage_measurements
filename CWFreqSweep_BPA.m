@@ -56,6 +56,9 @@ FundTone_InFreq2 = zeros(size_eng);
 FundTone_OutFreq2 = zeros(size_eng);
 
 %% Conduct Sweeps
+
+% REMINDER: Grab quiescent values
+
 idx = 0; %temp value for recording progress on waitbar
 h = waitbar(0, 'Testing Sweep in Progress...')
 SMJ100A_PowerSet(SMJ100A,-60)

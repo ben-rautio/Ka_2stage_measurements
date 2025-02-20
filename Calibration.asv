@@ -11,11 +11,10 @@ addpath(strcat(dirPath,'\RSTools'))
 
 
 %% Prepare Sweeps
-%max of SMW200A is 40GHz!!
-Fo = 38e9:0.2e9:40e9; %Center Frequency (Hz)
+Fo = 38e9:0.2e9:41e9; %Center Frequency (Hz)
 
 % THIS RANGE IS SOMETHING YOU NEED TO FIGURE OUT YOURSELF
-Pdes = -45:1:-25; %Power set on signal generator (dBm) (for input cal)
+Pdes = -40:1:-20; %Power set on signal generator (dBm) (for input cal)
 Pavs = repmat(Pdes, length(Fo), 1)'; % shaping
 
 %% Prepare Instruments
@@ -117,7 +116,7 @@ close(h) %close waitbar
 SMJ100A_OnOff(SMJ100A, 'off') % Turn off sig gen
 SMJ100A_PowerSet(SMJ100A,-60) % set to a low power value
 
-% Safe Bench Equipment
+%% Safe Bench Equipment
 N6705A_Close( N6705A ) % DC Supply (this does not turn it off - it just terminates the remote connection)
 NRP_Close( NRP67T ) % coupler power meter
 NRP67T_Close( NRX ) %output power meter
