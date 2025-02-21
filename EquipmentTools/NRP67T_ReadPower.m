@@ -9,7 +9,7 @@ fwrite(NRP67T,"INIT:ALL");
 % fwrite(NRP67T,"TRIG:COUN 20");
 
 message =  sprintf('FETCH%d?',1);
-Power = str2num(query(NRP67T, message))
+Power = str2double(query(NRP67T, message));
 
 if isempty(Power)
     Power = 0;
