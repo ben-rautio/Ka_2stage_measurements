@@ -185,3 +185,6 @@ plot(Pavs,err2(:,1:numel(Fo)))
 plot(Pavs,err3(:,1:numel(Fo)))
 grid on
 
+% GSG loss is half since this is a thru measurement
+avg_gsg_loss = avg_gsg_loss ./ 2;
+

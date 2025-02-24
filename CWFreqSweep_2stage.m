@@ -1,0 +1,260 @@
+%% CW Measurement over Frequency
+
+close all; clear all; clc
+%% External Tools
+dirPath = pwd;
+addpath(strcat(dirPath,'\RSTools'))
+addpath(strcat(dirPath,'\EquipmentTools'))
+
+% load('CalibrationValues.mat')
+avg_inp_off_s = load("MIWAVE_input_cal.mat","avg_inp_off");
+avg_inp_off = avg_inp_off_s.avg_inp_off;
+avg_output_atten_s = load("outputCal_data1_raw.mat","avg_output_atten");
+avg_output_atten = avg_output_atten_s.avg_output_atten;
+avg_GSG_atten_s = load("GSG_cal.mat","avg_gsg_loss");
+avg_gsg_atten = avg_GSG_atten_s.avg_gsg_loss;
+
+%calculate input offset to get input power
+inp_offset = avg_inp_off - avg_gsg_atten; %add this to inp power meter to get inp power
+%calculate output attenuation to get output power
+output_atten = avg_output_atten + avg_gsg_atten; %add this to output power meter to get output power
+%avg the last 5-10 samples to get a single value vs power
+inp_off_avg = mean(inp_offset(size(inp_offset,2)-5:end,:),1);
+output_off_avg = mean(output_atten(size(output_atten,2)-5:end,:),1);
+
+%% Prepare Sweeps
+Fo = 38e9:0.2e9:40e9; %Center Frequency (Hz)
+
+% THIS RANGE IS SOMETHING YOU NEED TO FIGURE OUT YOURSELF
+Pdes = -35:1:-15; %Power set on signal generator (dBm)
+Pavs = repmat(Pdes, length(Fo), 1)'; % shaping
+
+%% Prepare Instruments
+
+% N6705A Power Supply Settings
+Gate1 = 1; %channel
+Drain1 = 2; %channel
+Gate2 = 3; %channel
+Drain2 = 4; %channel
+N6705A = N6705A_Setup(7,5); %DC Power Supply
+
+NRP67T = NRP_Setup_67T_USB(); %coupler meter
+% power67 = NRP_ReadPower(NRP67T,40e9)
+% NRP_Close( NRP67T )
+
+NRX = NRP67T_Setup(); %output meter for output atten, wait ~5s for read after changing power
+% powerNRX = NRP67T_ReadPower(NRX,40e9)
+% NRP67T_Close( NRX )
+
+SMJ100A = SMJ100A_Setup(7,28); %Vector Signal Generator - control
+
+%% Prepare Engineering Datasets
+size_eng = [length(Pavs(:,1))];
+wbar_len = numel(Pavs);
+
+% assuming two devices
+Vd1_eng = zeros(size_eng);
+Vg1_eng = zeros(size_eng);
+Id1_eng = zeros(size_eng);
+Ig1_eng = zeros(size_eng);
+
+Vd2_eng = zeros(size_eng);
+Vg2_eng = zeros(size_eng);
+Id2_eng = zeros(size_eng);
+Ig2_eng = zeros(size_eng);
+
+% Three different measured power values at each sweep point
+FundTone_In = zeros(size_eng);
+FundTone_Out = zeros(size_eng);
+
+FundTone_InFreq = zeros(size_eng);
+FundTone_OutFreq = zeros(size_eng);
+
+FundTone_InFreq2 = zeros(size_eng);
+FundTone_OutFreq2 = zeros(size_eng);
+
+%% Conduct Sweeps
+
+% Grab quiescent values before starting sweep
+Vgsq1 =  N6705A_GetVal(N6705A, Gate1, 'voltage');
+Igsq1 = N6705A_GetVal(N6705A, Gate1, 'current');
+Idsq1 = N6705A_GetVal(N6705A, Drain1, 'current');
+Vdsq1 = N6705A_GetVal(N6705A, Drain1, 'voltage');
+Vgsq2 =  N6705A_GetVal(N6705A, Gate2, 'voltage');
+Igsq2 = N6705A_GetVal(N6705A, Gate2, 'current');
+Idsq2 = N6705A_GetVal(N6705A, Drain2, 'current');
+Vdsq2 = N6705A_GetVal(N6705A, Drain2, 'voltage');
+
+idx = 0; %temp value for recording progress on waitbar
+h = waitbar(0, 'Testing Sweep in Progress...');
+SMJ100A_PowerSet(SMJ100A,-60)
+SMJ100A_OnOff(SMJ100A, 'on')
+
+%have plots running while sweep running
+%vs freq and Pavs
+tiledlayout(1,2)
+nexttile
+hold on
+xlabel("PAVS")
+ylabel("Coupled, Output")
+hold off
+nexttile
+hold on
+xlabel("Freq")
+ylabel("Coupled, Output")
+hold off
+
+for j = 1:1:length(Fo)
+    SMJ100A_FreqSet(SMJ100A, Fo(j))
+    SMJ100A_PowerSet(SMJ100A,-35)
+    pause(5) % wait five seconds
+    for i = 1:1:length(Pavs(:,1))
+        %RECORD RESULTS
+        SMJ100A_PowerSet(SMJ100A, Pavs(i,j))
+        pause(5) %wait 5s, saw this settling time by changing SMJ with knob
+        %read coupler power
+        FundTone_In(i,j) = NRP_ReadPower(NRP67T, Fo(j));
+        %read power to output meter
+        FundTone_Out(i,j) = NRP67T_ReadPower(NRX,Fo(j));
+
+        FundTone_InFreq(i,j) = NRP_ReadPower(NRP67T, Fo(j));
+        FundTone_OutFreq(i,j) = NRP67T_ReadPower(NRX,Fo(j));
+
+        FundTone_InFreq2(i,j) = NRP_ReadPower(NRP67T, Fo(j));
+        FundTone_OutFreq2(i,j) = NRP67T_ReadPower(NRX,Fo(j));
+        
+        Vd1_eng(i,j) = N6705A_GetVal(N6705A, Drain1, 'voltage');
+        Vg1_eng(i,j) = N6705A_GetVal(N6705A, Gate1, 'voltage');
+        Id1_eng(i,j) = N6705A_GetVal(N6705A, Drain1, 'current');
+        Ig1_eng(i,j) = N6705A_GetVal(N6705A, Gate1, 'current');
+        
+        Vd2_eng(i,j) = N6705A_GetVal(N6705A, Drain2, 'voltage');
+        Vg2_eng(i,j) = N6705A_GetVal(N6705A, Gate2, 'voltage');
+        Id2_eng(i,j) = N6705A_GetVal(N6705A, Drain2, 'current');
+        Ig2_eng(i,j) = N6705A_GetVal(N6705A, Gate2, 'current');
+        
+        %plot
+        nexttile(1)
+        hold on
+        scatter(Pavs(i,j), FundTone_In(i,j));
+        scatter(Pavs(i,j), FundTone_InFreq(i,j));
+        scatter(Pavs(i,j), FundTone_InFreq2(i,j));
+        scatter(Pavs(i,j), FundTone_Out(i,j));
+        scatter(Pavs(i,j), FundTone_OutFreq(i,j));
+        scatter(Pavs(i,j), FundTone_OutFreq2(i,j));
+        grid on
+        hold off
+        nexttile(2)
+        hold on
+        scatter(Fo(j), FundTone_In(i,j));
+        scatter(Fo(j), FundTone_InFreq(i,j));
+        scatter(Fo(j), FundTone_InFreq2(i,j));
+        scatter(Fo(j), FundTone_Out(i,j));
+        scatter(Fo(j), FundTone_OutFreq(i,j));
+        scatter(Fo(j), FundTone_OutFreq2(i,j));
+        grid on
+        hold off
+
+        % UPDATE WAITBAR
+        waitbar(idx./wbar_len,h,'Testing Sweep in Progress...')
+        idx = idx + 1;
+
+    end %Pavs
+    freqChangeFlag = 1;
+end %Fo
+
+close(h) %close waitbar
+SMJ100A_OnOff(SMJ100A, 'off') % Turn off sig gen
+SMJ100A_PowerSet(SMJ100A,-60) % set to a low power value
+
+%% Safe Bench Equipment
+N6705A_Close( N6705A ) % DC Supply (this does not turn it off - it just terminates the remote connection)
+
+SMJ100A_OnOff(SMJ100A, 'off') % Turn off sig gen
+SMJ100A_PowerSet(SMJ100A,-60) % set to a low power value
+% Safe Bench Equipment
+NRP_Close( NRP67T ) % coupler power meter
+NRP67T_Close( NRX ) %output power meter
+SMJ100A_Close( SMJ100A ) % Vector Signal Generator
+
+%% Calculate Pout, Gain, PAE etc.
+
+% Scale these as necessary
+Attenuation_scaled = repmat(output_off_avg, length(Pdes), 1); % Output Attenuation
+InputOffsets_scaled = repmat(inp_off_avg, length(Pdes), 1); % Input Offsets
+
+Pout1 = FundTone_Out + Attenuation_scaled; % Use whichever measured power you want. Or all of them.
+Pout2 = FundTone_OutFreq + Attenuation_scaled; % Use whichever measured power you want. Or all of them.
+Pout3 = FundTone_OutFreq2 + Attenuation_scaled; % Use whichever measured power you want. Or all of them.
+
+Pout_watts1 = 10.^(Pout1./10)./1000;
+Pout_watts2 = 10.^(Pout2./10)./1000;
+Pout_watts3 = 10.^(Pout3./10)./1000;
+
+Pin1 = FundTone_In + InputOffsets_scaled;
+Pin2 = FundTone_InFreq + InputOffsets_scaled;
+Pin3 = FundTone_InFreq2 + InputOffsets_scaled;
+
+Pin_watts1 = 10.^(Pin1./10)./1000;
+Pin_watts2 = 10.^(Pin2./10)./1000;
+Pin_watts3 = 10.^(Pin3./10)./1000;
+
+Pdc_Drain1 = Vd1_eng.*Id1_eng;
+Pdc_Gate1 = Vg1_eng.*Ig1_eng;
+Pdc_tot1 = Pdc_Drain1 + Pdc_Gate1;
+
+Pdc_Drain2 = Vd2_eng.*Id2_eng;
+Pdc_Gate2 = Vg2_eng.*Ig2_eng;
+Pdc_tot2 = Pdc_Drain2 + Pdc_Gate2;
+
+Pdc_tot = Pdc_tot1 + Pdc_tot2;
+
+DE1 = (Pout_watts1./Pdc_tot).*100;
+PAE1 = ((Pout_watts1-Pin_watts1)./Pdc_tot).*100;
+
+Gain1 = Pout1 - Pin1;
+
+%% Plotting - change as necessary
+close all
+tiledlayout('flow')
+% Input Power Driveups
+nexttile
+hold on; box on; grid on; grid minor; set(gcf,'color','w')
+yyaxis left
+plot(Pin1,Pout1)
+plot(Pin1,Gain1)
+ylabel('Pout (dBm) and Gain (dB)')
+yyaxis right
+plot(Pin1,PAE1)
+ylabel('PAE (%)')
+xlabel('Pin (dBm)')
+legend('38 GHz','38.2 GHz','38.4 GHz','38.6 GHz', ...
+    '38.8 GHz','39 GHz','39.2 GHz','39.4 GHz','39.6 GHz','39.8 GHz','40 GHz') % or however you're doing it
+hold off
+
+% Output Power Driveups
+nexttile
+hold on; box on; grid on; grid minor; set(gcf,'color','w')
+yyaxis left
+plot(Pout1,Gain1)
+ylabel('Gain (dB)')
+% ylim([4 13])
+xlim([20 30])
+yyaxis right
+plot(Pout1,PAE1)
+ylabel('PAE (%)')
+xlabel('Pout (dBm)')
+legend('38 GHz','38.2 GHz','38.4 GHz','38.6 GHz', ...
+    '38.8 GHz','39 GHz','39.2 GHz','39.4 GHz','39.6 GHz','39.8 GHz','40 GHz'); % or however you're doing it% ylim([0 40])
+hold off
+
+% CW
+nexttile
+hold on; box on; grid on; grid minor; set(gcf,'color','w')
+plot(Fo, Pout1(:,1:numel(Fo)))
+plot(Fo, Gain1(:,1:numel(Fo)))
+plot(Fo, PAE1(:,1:numel(Fo)))
+hold off
+
+
+
