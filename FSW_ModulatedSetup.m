@@ -43,8 +43,10 @@ function FSW_ModulatedSetup(FSW,Fo,pwr,BW)
     fprintf(FSW,message);
     message = sprintf(['SENS:FREQ:CENT ', num2str(Fo)]); %set center freq
     fprintf(FSW,message);
+    pause(1)
     message = sprintf(['SENS:FREQ:SPAN ', num2str((BW*3) + (BW/10))]); %set span
     fprintf(FSW,message);
+    puase(1)
     %do all the channel settings
     message = sprintf('SENS:POW:ACH:TXCH:COUN 1'); %1 tx channel
     fprintf(FSW,message);
