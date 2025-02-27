@@ -29,7 +29,7 @@ output_off_avg = output_off_avg(output_off_avg~=0);
 %% Prepare Sweeps
 Fo = 38e9:0.2e9:40e9; %Center Frequency (Hz)
 
-Pdes = -33:1:-23; %Power set on signal generator (dBm)
+Pdes = -33:1:-33; %Power set on signal generator (dBm)
 Pavs = repmat(Pdes, length(Fo), 1)'; % shaping
 
 %% Prepare Instruments
@@ -99,7 +99,7 @@ AMPM = zeros(size_eng);
 AMPM_dpd = zeros(size_eng);
 
 %% Measurement Time
-
+close all
 % Grab quiescent values before starting sweep
 Vgsq1 =  N6705A_GetVal(N6705A, Gate1, 'voltage');
 Igsq1 = N6705A_GetVal(N6705A, Gate1, 'current');
@@ -113,8 +113,31 @@ Vdsq2 = N6705A_GetVal(N6705A, Drain2, 'voltage');
 idx = 0; %temp value for recording progress on waitbar
 h = waitbar(0, 'Testing Sweep in Progress...');
 
-for j = 1:numel(Fo)
-    for i = 1:1:length(Pavs)
+%plot powers in case...
+tiledlayout(2,2)
+nexttile
+hold on
+xlabel("SMW Power")
+ylabel("Input Power")
+hold off
+nexttile
+hold on
+xlabel("SMW Power")
+ylabel("Channel Power")
+hold off
+nexttile
+hold on
+xlabel("Center Freq")
+ylabel("Input Power")
+hold off
+nexttile
+hold on
+xlabel("Center Freq")
+ylabel("Output Power")
+hold off
+
+for j = 1:1:numel(Fo)
+    for i = 1:1:length(Pdes)
         %setup ref levels, generate signal, set freq and power, setup
         %channels
         FSW_ModulatedSetup(FSW,Fo(j),Pavs(i),200e6)
@@ -164,9 +187,11 @@ for j = 1:numel(Fo)
         fprintf(FSW,message);
         %ask ricky, is there a reason why this needs to be reset once DPD
         %was turned on?
+        %using default direct dpd settings, may want to adjust this
+        %later...
         message = sprintf('CONF:DDPD:STAR;*WAI'); % start DPD
         fprintf(FSW,message);
-        pause(10)   % give it time to breathe
+        pause(15)   % give it time to breathe
         message = sprintf('INIT:CONT ON'); % set amplifier channel to continuous mode
         fprintf(FSW,message);
         pause(2) % wait a second
@@ -205,6 +230,36 @@ for j = 1:numel(Fo)
         adjpow_lower_dpd(i,j) = adjpow_data(2); %ACPR lower
         adjpow_upper_dpd(i,j) = adjpow_data(3); %ACPR upper
         
+        %plot stuff during sweeps
+        nexttile(1)
+        hold on
+        scatter(Pavs(i),FundTone_In(i,j)+inp_off_avg(j),'r')
+        scatter(Pavs(i),FundTone_InFreq(i,j)+inp_off_avg(j),'+r')
+        scatter(Pavs(i),FundTone_In_dpd(i,j)+inp_off_avg(j),'b')
+        scatter(Pavs(i),FundTone_InFreq_dpd(i,j)+inp_off_avg(j),'+b')
+        hold off
+        nexttile(2)
+        hold on
+        scatter(Pavs(i),FundTone_Out(i,j)+fsw_avg_offset(j),'r')
+        scatter(Pavs(i),FundTone_OutFreq(i,j)+fsw_avg_offset(j),'+r')
+        scatter(Pavs(i),FundTone_Out_dpd(i,j)+fsw_avg_offset(j),'b')
+        scatter(Pavs(i),FundTone_OutFreq_dpd(i,j)+fsw_avg_offset(j),'+b')
+        hold off
+        nexttile(3)
+        hold on
+        scatter(Fo(j),FundTone_In(i,j)+inp_off_avg(j),'r')
+        scatter(Fo(j),FundTone_InFreq(i,j)+inp_off_avg(j),'+r')
+        scatter(Fo(j),FundTone_In_dpd(i,j)+inp_off_avg(j),'b')
+        scatter(Fo(j),FundTone_InFreq_dpd(i,j)+inp_off_avg(j),'+b')
+        hold off
+        nexttile(4)
+        hold on
+        scatter(Fo(j),FundTone_Out(i,j)+fsw_avg_offset(j),'r')
+        scatter(Fo(j),FundTone_OutFreq(i,j)+fsw_avg_offset(j),'+r')
+        scatter(Fo(j),FundTone_Out_dpd(i,j)+fsw_avg_offset(j),'b')
+        scatter(Fo(j),FundTone_OutFreq_dpd(i,j)+fsw_avg_offset(j),'+b')
+        hold off
+
         waitbar(idx./prod(size_eng),h,'Testing Sweep in Progress...')
         idx = idx + 1;
     end
