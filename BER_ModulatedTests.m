@@ -29,7 +29,7 @@ output_off_avg = output_off_avg(output_off_avg~=0);
 %% Prepare Sweeps
 Fo = 38e9:0.2e9:40e9; %Center Frequency (Hz)
 
-Pdes = -33:1:-25; %Power set on signal generator (dBm)
+Pdes = -33:0.5:-27; %Power set on signal generator (dBm)
 Pavs = repmat(Pdes, length(Fo), 1)'; % shaping
 
 %% Prepare Instruments
@@ -51,7 +51,7 @@ FSW = FSW_Setup(7,22);
 SMW = SMJ100A_Setup(7,28); %Vector Signal Generator - control, for setting center freq of modulated signal....
 %% Prepare Engineering Datasets
 
-size_eng = [length(Pavs), length(Fo)];
+size_eng = [length(Pdes), length(Fo)];
 
 Vd1_eng = zeros(size_eng);
 Vg1_eng = zeros(size_eng);
@@ -237,6 +237,7 @@ for j = 1:1:numel(Fo)
         scatter(Pavs(i),FundTone_InFreq(i,j)+inp_off_avg(j),'+r')
         scatter(Pavs(i),FundTone_In_dpd(i,j)+inp_off_avg(j),'b')
         scatter(Pavs(i),FundTone_InFreq_dpd(i,j)+inp_off_avg(j),'+b')
+        grid on
         hold off
         nexttile(2)
         hold on
@@ -244,6 +245,7 @@ for j = 1:1:numel(Fo)
         scatter(Pavs(i),FundTone_OutFreq(i,j)+fsw_avg_offset(j),'+r')
         scatter(Pavs(i),FundTone_Out_dpd(i,j)+fsw_avg_offset(j),'b')
         scatter(Pavs(i),FundTone_OutFreq_dpd(i,j)+fsw_avg_offset(j),'+b')
+        grid on
         hold off
         nexttile(3)
         hold on
@@ -251,6 +253,7 @@ for j = 1:1:numel(Fo)
         scatter(Fo(j),FundTone_InFreq(i,j)+inp_off_avg(j),'+r')
         scatter(Fo(j),FundTone_In_dpd(i,j)+inp_off_avg(j),'b')
         scatter(Fo(j),FundTone_InFreq_dpd(i,j)+inp_off_avg(j),'+b')
+        grid on
         hold off
         nexttile(4)
         hold on
@@ -258,6 +261,7 @@ for j = 1:1:numel(Fo)
         scatter(Fo(j),FundTone_OutFreq(i,j)+fsw_avg_offset(j),'+r')
         scatter(Fo(j),FundTone_Out_dpd(i,j)+fsw_avg_offset(j),'b')
         scatter(Fo(j),FundTone_OutFreq_dpd(i,j)+fsw_avg_offset(j),'+b')
+        grid on
         hold off
 
         waitbar(idx./prod(size_eng),h,'Testing Sweep in Progress...')
@@ -287,9 +291,9 @@ Attenuation_scaled = repmat(output_off_avg, length(Pdes), 1); % Output Attenuati
 InputOffsets_scaled = repmat(inp_off_avg, length(Pdes), 1); % Input Offsets vs freq
 FSWOffsets_scaled = repmat(fsw_avg_offset,length(Pdes), 1); %FSW offsets vs freq
 
-Pout1 = FundTone_Out + Attenuation_scaled + FSWOffsets_scaled;
+Pout1 = FundTone_Out + FSWOffsets_scaled;
 Pout1_watts = 10.^(Pout1./10)./1000;
-Pout2 = FundTone_OutFreq + Attenuation_scaled + FSWOffsets_scaled;
+Pout2 = FundTone_OutFreq +  FSWOffsets_scaled;
 Pout2_watts = 10.^(Pout2./10)./1000;
 
 Pin1 = FundTone_In + InputOffsets_scaled;
@@ -305,18 +309,18 @@ Pdc_Gate2 = Vg2_eng.*Ig2_eng;
 Pdc_tot2 = Pdc_Drain2 + Pdc_Gate2;
 Pdc_tot = Pdc_tot1 + Pdc_tot2;
 
-DE1 = (Pout_watts1./Pdc_tot).*100;
-PAE1 = ((Pout_watts1-Pin_watts1)./Pdc_tot).*100;
+DE1 = (Pout1_watts./Pdc_tot).*100;
+PAE1 = ((Pout1_watts-Pin1_watts)./Pdc_tot).*100;
 Gain1 = Pout1 - Pin1;
 
-DE2 = (Pout_watts2./Pdc_tot).*100;
-PAE2 = ((Pout_watts2-Pin_watts2)./Pdc_tot).*100;
+DE2 = (Pout2_watts./Pdc_tot).*100;
+PAE2 = ((Pout2_watts-Pin2_watts)./Pdc_tot).*100;
 Gain2 = Pout2 - Pin2;
 
 %% Calculate Pout, Gain, PAE with DPD
-Pout1_dpd = FundTone_Out_dpd + Attenuation_scaled + FSWOffsets_scaled;
+Pout1_dpd = FundTone_Out_dpd + FSWOffsets_scaled;
 Pout1_watts_dpd = 10.^(Pout1_dpd./10)./1000;
-Pout2_dpd = FundTone_OutFreq_dpd + Attenuation_scaled + FSWOffsets_scaled;
+Pout2_dpd = FundTone_OutFreq_dpd + FSWOffsets_scaled;
 Pout2_watts_dpd = 10.^(Pout2_dpd./10)./1000;
 
 Pin1_dpd = FundTone_In_dpd + InputOffsets_scaled;
@@ -402,17 +406,17 @@ set(gcf, 'color', 'w');
 hold on 
 
 yyaxis left
-plot(Pout, Gain)
-plot(Pout_dpd, Gain_dpd)
-plot(Pout, CFAC_out)
-plot(Pout_dpd, CFAC_out_dpd)
+plot(Pout1, Gain1)
+plot(Pout1_dpd, Gain1_dpd)
+plot(Pout1, CFAC_out)
+plot(Pout1_dpd, CFAC_out_dpd)
 xlabel('Pout (dBm)')
 ylabel('Gain (dB)')
-title('20 MHz, 10 dB PAPR Modulated Driveup')
+title('200 MHz, 10 dB PAPR Modulated Driveup')
 
 yyaxis right
-plot(Pout, PAE)
-plot(Pout_dpd, PAE_dpd)
+plot(Pout1, PAE1)
+plot(Pout1_dpd, PAE1_dpd)
 ylabel('Efficiency (%)')
 legend('Gain no DPD','Gain DPD','Crest Factor Out no DPD','Crest Factor Out DPD','PAE no DPD','PAE DPD')
 
@@ -429,14 +433,14 @@ set(gcf, 'color', 'w');
 hold on 
 
 
-plot(Pout,adjpow(:,2))
-plot(Pout_dpd,adjpow_dpd(:,2))
+plot(Pout1,adjpow_lower)
+plot(Pout1_dpd,adjpow_lower_dpd)
 
 
 legend('ACPR_L No DPD (dBc)','ACPR_L DPD (dBc)')
 xlabel('Pout (dBm)')
 ylabel('ACPR (dBc)')
-title('20 MHz, 10 dB PAPR Modulated Driveup')
+title('200 MHz, 10 dB PAPR Modulated Driveup')
 grid on
 hold off
 
@@ -445,13 +449,11 @@ set(gcf, 'color', 'w');
 hold on 
 grid on
 
-plot(Pout,EVM)
-plot(Pout_dpd,EVM_dpd)
+plot(Pout1,EVM)
+plot(Pout1_dpd,EVM_dpd)
 
 legend('EVM No DPD (%)','EVM DPD (%)')
 xlabel('Pout (dBm)')
 ylabel('EVM (%)')
-title('20 MHz, 10 dB PAPR Modulated Driveup')
+title('200 MHz, 10 dB PAPR Modulated Driveup')
 hold off
-
-%% test
