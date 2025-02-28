@@ -29,7 +29,7 @@ output_off_avg = output_off_avg(output_off_avg~=0);
 %% Prepare Sweeps
 Fo = 38e9:0.2e9:40e9; %Center Frequency (Hz)
 
-Pdes = -33:1:-33; %Power set on signal generator (dBm)
+Pdes = -33:1:-25; %Power set on signal generator (dBm)
 Pavs = repmat(Pdes, length(Fo), 1)'; % shaping
 
 %% Prepare Instruments
@@ -48,7 +48,7 @@ Drain2 = 4; %channel
 N6705A = N6705A_Setup(7,5); %DC Power Supply
 
 FSW = FSW_Setup(7,22);
-
+SMW = SMJ100A_Setup(7,28); %Vector Signal Generator - control, for setting center freq of modulated signal....
 %% Prepare Engineering Datasets
 
 size_eng = [length(Pavs), length(Fo)];
@@ -140,7 +140,7 @@ for j = 1:1:numel(Fo)
     for i = 1:1:length(Pdes)
         %setup ref levels, generate signal, set freq and power, setup
         %channels
-        FSW_ModulatedSetup(FSW,Fo(j),Pavs(i),200e6)
+        FSW_ModulatedSetup(FSW,SMW,Fo(j),Pavs(i),200e6)
         message = sprintf('INST:SEL AMPL'); % back to the amplifier channel
         fprintf(FSW,message);
         pause(2)
@@ -278,7 +278,8 @@ close(h) %close waitbar
 NRP_Close( NRP67T ) % coupler power meter
 NRP67T_Close( NRX ) %output power meter
 N6705A_Close( N6705A ) % DC Supply (this does not turn it off - it just terminates the remote connection)
-FSW_Close(FSW)
+FSW_Close(FSW) % FSW spectrum analyzer
+SMJ100A_Close( SMJ100A ) % Vector Signal Generator
 
 %% Calculate Pout, Gain, PAE no DPD
 % Scale these as necessary

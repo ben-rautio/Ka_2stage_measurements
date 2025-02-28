@@ -1,4 +1,4 @@
-function FSW_ModulatedSetup(FSW,Fo,pwr,BW)
+function FSW_ModulatedSetup(FSW,SMW,Fo,pwr,BW)
     message = sprintf('INST:SEL AMPL'); % select the amplifier channel
     fprintf(FSW,message);
     message = sprintf('CONF:DDPD:APPL:STAT OFF'); % Turn off DPD
@@ -13,6 +13,8 @@ function FSW_ModulatedSetup(FSW,Fo,pwr,BW)
 
     message = sprintf(['SENS:FREQ:CENT ',num2str(Fo)]); %set freq
     fprintf(FSW,message);
+    pause(2)
+    SMJ100A_FreqSet(SMW, Fo)
     pause(2)
     message = sprintf('CONF:GEN:POW:LEV %f;*WAI',pwr); % set the power
     fprintf(FSW,message);
