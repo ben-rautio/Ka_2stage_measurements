@@ -201,8 +201,7 @@ EVM = EVM_s.EVM;
 EVM_dpd_s = load("Modulated_Meas_WS.mat","EVM_dpd");
 EVM_dpd = EVM_dpd_s.EVM_dpd;
 
-figure
-tiledlayout("flow")
+
 nexttile
 hold on
 yyaxis left
@@ -222,7 +221,6 @@ yticks(1:0.5:4.5)
 ylim([1 4.5])
 grid on
 legend
-title("Modulated Gain, PAE")
 hold off
 
 %ACPR
@@ -254,14 +252,11 @@ hold off
 nexttile
 hold on
 for i = 1:1:numel(freq_mod)
-    plot(Pout1_mod(:,i),EVM(:,i),'LineStyle','-','DisplayName',num2str(freq_mod(i)/1e9)+" GHz NDPD")
-    plot(Pout1_mod_dpd(:,i),EVM_dpd(:,i),'LineStyle','--','DisplayName',num2str(freq_mod(i)/1e9)+" GHz DPD")
+    plot(Pout1_mod(:,i),ACPR_U(:,i),'LineStyle','-','DisplayName',num2str(freq_mod(i)/1e9)+" GHz NDPD")
+    plot(Pout1_mod_dpd(:,i),ACPR_U_DPD(:,i),'LineStyle','--','DisplayName',num2str(freq_mod(i)/1e9)+" GHz DPD")
 end
 xlabel('Pout (dBm)')
 ylabel('EVM (%)')
 grid on
 legend
 hold off
-
-%next, choose a pout that has decent efficiency and linearity and plot over
-%frequency

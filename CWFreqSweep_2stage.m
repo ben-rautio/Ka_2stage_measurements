@@ -226,6 +226,7 @@ plot(Pin1,Gain1)
 ylabel('Pout (dBm) and Gain (dB)')
 yyaxis right
 plot(Pin1,PAE1)
+% yticks(0:3:27)
 ylabel('PAE (%)')
 xlabel('Pin (dBm)')
 legend('38 GHz','38.2 GHz','38.4 GHz','38.6 GHz', ...
@@ -241,6 +242,8 @@ ylabel('Gain (dB)')
 % ylim([4 13])
 xlim([20 30])
 yyaxis right
+yticks(0:3:27)
+ylim([0 27])
 plot(Pout1,PAE1)
 ylabel('PAE (%)')
 xlabel('Pout (dBm)')
@@ -255,6 +258,5 @@ plot(Fo, Pout1(:,1:numel(Fo)))
 plot(Fo, Gain1(:,1:numel(Fo)))
 plot(Fo, PAE1(:,1:numel(Fo)))
 hold off
-
 
 
