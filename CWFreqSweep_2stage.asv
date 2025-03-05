@@ -1,5 +1,15 @@
 %% CW Measurement over Frequency
 
+%3-5-2025
+%offsets seem weird for the FSW cal, next time use a coupler at the output
+%for now, take two sets of measurements
+%first set the output is connected to the FSW. Grab linearity stats
+%for the second set, output is connected to the power meter, use CW offsets
+%to calculate efficiency, gain, output power
+%do not do any DPD, allowable meas bandwidth not supported by FS
+
+%first set workspace name
+
 close all; clear all; clc
 %% External Tools
 dirPath = pwd;

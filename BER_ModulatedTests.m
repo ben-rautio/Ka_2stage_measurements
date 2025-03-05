@@ -1,5 +1,19 @@
 %% CW Measurement over Frequency
 
+%3-5-2025
+%offsets seem weird for the FSW cal, next time use a coupler at the output
+%for now, take two sets of measurements
+%first set the output is connected to the FSW. Grab linearity stats
+%for the second set, output is connected to the power meter, use CW offsets
+%to calculate efficiency, gain, output power
+%do not do any DPD, allowable meas bandwidth not supported by SMW200A
+
+%first set workspace name FSW_modulated_3-5-2025
+% second set workspace name PowerMeter_modulated_3-5-2025
+
+%Note: set the meas BW on amplifier channel to 200 MHz for these datasets,
+%this seems to greatly affect reported EVM!!!!
+
 close all; clear all; clc
 %% External Tools
 dirPath = pwd;
@@ -29,7 +43,7 @@ output_off_avg = output_off_avg(output_off_avg~=0);
 %% Prepare Sweeps
 Fo = 38e9:0.2e9:40e9; %Center Frequency (Hz)
 
-Pdes = -33:0.5:-27; %Power set on signal generator (dBm)
+Pdes = -33:0.5:-24; %Power set on signal generator (dBm)
 Pavs = repmat(Pdes, length(Fo), 1)'; % shaping
 
 %% Prepare Instruments
@@ -122,18 +136,22 @@ ylabel("Input Power")
 hold off
 nexttile
 hold on
-xlabel("SMW Power")
-ylabel("Channel Power")
-hold off
-nexttile
-hold on
-xlabel("Center Freq")
-ylabel("Input Power")
-hold off
-nexttile
-hold on
-xlabel("Center Freq")
+xlabel("Input Power")
 ylabel("Output Power")
+hold off
+nexttile
+hold on
+% xlabel("Output Power")
+% ylabel("PAE")
+xlabel("BLANK")
+ylabel("BLANK")
+hold off
+nexttile
+hold on
+% xlabel("Center Freq")
+% ylabel("Output Power")
+xlabel("BLANK")
+ylabel("BLANK")
 hold off
 
 for j = 1:1:numel(Fo)
@@ -141,33 +159,35 @@ for j = 1:1:numel(Fo)
         %setup ref levels, generate signal, set freq and power, setup
         %channels
         FSW_ModulatedSetup(FSW,SMW,Fo(j),Pavs(i),200e6)
-        message = sprintf('INST:SEL AMPL'); % back to the amplifier channel
-        fprintf(FSW,message);
+        % message = sprintf('INST:SEL AMPL'); % back to the amplifier channel
+        % fprintf(FSW,message);
         pause(2)
-        message = sprintf('INIT:CONT ON'); % set amplifier channel to continuous mode
-        fprintf(FSW,message);
-        pause(2) % wait a second
-        message = sprintf('FETC:MACC:REVM:CURR:RES?'); % get EVM with no DPD
-        EVM(i,j) = str2double(query(FSW, message)); % get EVM with no DPD
-        pause(2) % wait a second
-        message = sprintf('FETC:POW:CFAC:OUT:CURR:RES?'); % GRAB THE OUTPUT CREST FACTOR
-        CFAC_out(i,j) = str2double(query(FSW, message));
-        pause(2) % wait a second
-        message = sprintf('FETC:AMAM:CWID:CURR:RES?'); % GRAB AM/AM
-        AMAM(i,j) = str2double(query(FSW, message));
-        pause(2) % wait a second
-        message = sprintf('FETC:AMPM:CWID:CURR:RES?'); % GRAB AM/PM
-        AMPM(i,j) = str2double(query(FSW, message));
-        pause(2) % wait a second
-        message = sprintf('INST:SEL SAN'); % hop back to the spectrum
-        fprintf(FSW,message);
-        pause(2) % wait a second
+        % message = sprintf('INIT:CONT ON'); % set amplifier channel to continuous mode
+        % fprintf(FSW,message);
+        % pause(2) % wait a second
+        % message = sprintf('FETC:MACC:REVM:CURR:RES?'); % get EVM with no DPD
+        % EVM(i,j) = str2double(query(FSW, message)); % get EVM with no DPD
+        % pause(2) % wait a second
+        % message = sprintf('FETC:POW:CFAC:OUT:CURR:RES?'); % GRAB THE OUTPUT CREST FACTOR
+        % CFAC_out(i,j) = str2double(query(FSW, message));
+        % pause(2) % wait a second
+        % message = sprintf('FETC:AMAM:CWID:CURR:RES?'); % GRAB AM/AM
+        % AMAM(i,j) = str2double(query(FSW, message));
+        % pause(2) % wait a second
+        % message = sprintf('FETC:AMPM:CWID:CURR:RES?'); % GRAB AM/PM
+        % AMPM(i,j) = str2double(query(FSW, message));
+        % pause(2) % wait a second
+        % message = sprintf('INST:SEL SAN'); % hop back to the spectrum
+        % fprintf(FSW,message);
+        % pause(2) % wait a second
         
         % Grab NDPD values
         FundTone_In(i,j) = NRP_ReadPower(NRP67T, Fo(j));
-        FundTone_Out(i,j) = FSW_GetVal(FSW,'Channel');
+        % FundTone_Out(i,j) = FSW_GetVal(FSW,'Channel');
+        FundTone_Out(i,j) = NRP67T_ReadPower(NRX,Fo(j));
         FundTone_InFreq(i,j) = NRP_ReadPower(NRP67T, Fo(j));
-        FundTone_OutFreq(i,j) = FSW_GetVal(FSW,'Channel');
+        % FundTone_OutFreq(i,j) = FSW_GetVal(FSW,'Channel');
+        FundTone_OutFreq(i,j) = NRP67T_ReadPower(NRX,Fo(j));
 
         Vd1_eng(i,j) = N6705A_GetVal(N6705A, Drain1, 'voltage');
         Vg1_eng(i,j) = N6705A_GetVal(N6705A, Gate1, 'voltage');
@@ -178,91 +198,96 @@ for j = 1:1:numel(Fo)
         Id2_eng(i,j) = N6705A_GetVal(N6705A, Drain2, 'current');
         Ig2_eng(i,j) = N6705A_GetVal(N6705A, Gate2, 'current');
          
-        adjpow_data = FSW_GetVal(FSW, 'Sidebar'); % Ask the FSW now
-        adjpow_lower(i,j) = adjpow_data(2);
-        adjpow_upper(i,j) = adjpow_data(3);
+        % adjpow_data = FSW_GetVal(FSW, 'Sidebar'); % Ask the FSW now
+        % adjpow_lower(i,j) = adjpow_data(2);
+        % adjpow_upper(i,j) = adjpow_data(3);
         
         % DPD Time
-        message = sprintf('INST:SEL AMPL'); % back to the amplifier channel
-        fprintf(FSW,message);
-        %ask ricky, is there a reason why this needs to be reset once DPD
-        %was turned on?
-        %using default direct dpd settings, may want to adjust this
-        %later...
-        message = sprintf('CONF:DDPD:STAR;*WAI'); % start DPD
-        fprintf(FSW,message);
-        pause(15)   % give it time to breathe
-        message = sprintf('INIT:CONT ON'); % set amplifier channel to continuous mode
-        fprintf(FSW,message);
-        pause(2) % wait a second
-        message = sprintf('FETC:MACC:REVM:CURR:RES?'); % get EVM with DPD
-        EVM_dpd(i,j) = str2double(query(FSW, message)); % get EVM with DPD
-        pause(2) % wait a second
-        message = sprintf('FETC:POW:CFAC:OUT:CURR:RES?'); % GRAB THE OUTPUT CREST FACTOR
-        CFAC_out_dpd(i,j) = str2double(query(FSW, message));
-        pause(2) % wait a second
-        message = sprintf('FETC:AMAM:CWID:CURR:RES?'); % GRAB AM/AM
-        AMAM_dpd(i,j) = str2double(query(FSW, message));
-        pause(2) % wait a second
-        message = sprintf('FETC:AMPM:CWID:CURR:RES?'); % GRAB AM/PM
-        AMPM_dpd(i,j) = str2double(query(FSW, message));
-        pause(2) % wait a second
-        message = sprintf('INST:SEL SAN'); % back to the Spectrum
-        fprintf(FSW,message);
-	    pause(2)
-        
-        % Grab DPD Values
-        FundTone_In_dpd(i,j) = NRP_ReadPower(NRP67T, Fo(j));
-        FundTone_Out_dpd(i,j) = FSW_GetVal(FSW,'Channel');
-        FundTone_InFreq_dpd(i,j) = NRP_ReadPower(NRP67T, Fo(j));
-        FundTone_OutFreq_dpd(i,j) = FSW_GetVal(FSW,'Channel');
-        
-        Vd1_eng_dpd(i,j) = N6705A_GetVal(N6705A, Drain1, 'voltage');
-        Vg1_eng_dpd(i,j) = N6705A_GetVal(N6705A, Gate1, 'voltage');
-        Id1_eng_dpd(i,j) = N6705A_GetVal(N6705A, Drain1, 'current');
-        Ig1_eng_dpd(i,j) = N6705A_GetVal(N6705A, Gate1, 'current');
-        Vd2_eng_dpd(i,j) = N6705A_GetVal(N6705A, Drain2, 'voltage');
-        Vg2_eng_dpd(i,j) = N6705A_GetVal(N6705A, Gate2, 'voltage');
-        Id2_eng_dpd(i,j) = N6705A_GetVal(N6705A, Drain2, 'current');
-        Ig2_eng_dpd(i,j) = N6705A_GetVal(N6705A, Gate2, 'current');
-        
-        adjpow_data = FSW_GetVal(FSW, 'Sidebar'); % Ask the FSW now
-        adjpow_lower_dpd(i,j) = adjpow_data(2); %ACPR lower
-        adjpow_upper_dpd(i,j) = adjpow_data(3); %ACPR upper
+        % message = sprintf('INST:SEL AMPL'); % back to the amplifier channel
+        % fprintf(FSW,message);
+        % %ask ricky, is there a reason why this needs to be reset once DPD
+        % %was turned on?
+        % %using default direct dpd settings, may want to adjust this
+        % %later...
+        % message = sprintf('CONF:DDPD:STAR;*WAI'); % start DPD
+        % fprintf(FSW,message);
+        % pause(15)   % give it time to breathe
+        % message = sprintf('INIT:CONT ON'); % set amplifier channel to continuous mode
+        % fprintf(FSW,message);
+        % pause(2) % wait a second
+        % message = sprintf('FETC:MACC:REVM:CURR:RES?'); % get EVM with DPD
+        % EVM_dpd(i,j) = str2double(query(FSW, message)); % get EVM with DPD
+        % pause(2) % wait a second
+        % message = sprintf('FETC:POW:CFAC:OUT:CURR:RES?'); % GRAB THE OUTPUT CREST FACTOR
+        % CFAC_out_dpd(i,j) = str2double(query(FSW, message));
+        % pause(2) % wait a second
+        % message = sprintf('FETC:AMAM:CWID:CURR:RES?'); % GRAB AM/AM
+        % AMAM_dpd(i,j) = str2double(query(FSW, message));
+        % pause(2) % wait a second
+        % message = sprintf('FETC:AMPM:CWID:CURR:RES?'); % GRAB AM/PM
+        % AMPM_dpd(i,j) = str2double(query(FSW, message));
+        % pause(2) % wait a second
+        % message = sprintf('INST:SEL SAN'); % back to the Spectrum
+        % fprintf(FSW,message);
+	    % pause(2)
+        % 
+        % % Grab DPD Values
+        % FundTone_In_dpd(i,j) = NRP_ReadPower(NRP67T, Fo(j));
+        % FundTone_Out_dpd(i,j) = FSW_GetVal(FSW,'Channel');
+        % FundTone_InFreq_dpd(i,j) = NRP_ReadPower(NRP67T, Fo(j));
+        % FundTone_OutFreq_dpd(i,j) = FSW_GetVal(FSW,'Channel');
+        % 
+        % Vd1_eng_dpd(i,j) = N6705A_GetVal(N6705A, Drain1, 'voltage');
+        % Vg1_eng_dpd(i,j) = N6705A_GetVal(N6705A, Gate1, 'voltage');
+        % Id1_eng_dpd(i,j) = N6705A_GetVal(N6705A, Drain1, 'current');
+        % Ig1_eng_dpd(i,j) = N6705A_GetVal(N6705A, Gate1, 'current');
+        % Vd2_eng_dpd(i,j) = N6705A_GetVal(N6705A, Drain2, 'voltage');
+        % Vg2_eng_dpd(i,j) = N6705A_GetVal(N6705A, Gate2, 'voltage');
+        % Id2_eng_dpd(i,j) = N6705A_GetVal(N6705A, Drain2, 'current');
+        % Ig2_eng_dpd(i,j) = N6705A_GetVal(N6705A, Gate2, 'current');
+        % 
+        % adjpow_data = FSW_GetVal(FSW, 'Sidebar'); % Ask the FSW now
+        % adjpow_lower_dpd(i,j) = adjpow_data(2); %ACPR lower
+        % adjpow_upper_dpd(i,j) = adjpow_data(3); %ACPR upper
         
         %plot stuff during sweeps
         nexttile(1)
         hold on
         scatter(Pavs(i),FundTone_In(i,j)+inp_off_avg(j),'r')
         scatter(Pavs(i),FundTone_InFreq(i,j)+inp_off_avg(j),'+r')
-        scatter(Pavs(i),FundTone_In_dpd(i,j)+inp_off_avg(j),'b')
-        scatter(Pavs(i),FundTone_InFreq_dpd(i,j)+inp_off_avg(j),'+b')
+        % scatter(Pavs(i),FundTone_In_dpd(i,j)+inp_off_avg(j),'b')
+        % scatter(Pavs(i),FundTone_InFreq_dpd(i,j)+inp_off_avg(j),'+b')
         grid on
         hold off
         nexttile(2)
         hold on
-        scatter(Pavs(i),FundTone_Out(i,j)+fsw_avg_offset(j),'r')
-        scatter(Pavs(i),FundTone_OutFreq(i,j)+fsw_avg_offset(j),'+r')
-        scatter(Pavs(i),FundTone_Out_dpd(i,j)+fsw_avg_offset(j),'b')
-        scatter(Pavs(i),FundTone_OutFreq_dpd(i,j)+fsw_avg_offset(j),'+b')
+        % scatter(Pavs(i),FundTone_Out(i,j)+fsw_avg_offset(j),'r')
+        % scatter(Pavs(i),FundTone_OutFreq(i,j)+fsw_avg_offset(j),'+r')
+        % scatter(Pavs(i),FundTone_Out_dpd(i,j)+fsw_avg_offset(j),'b')
+        % scatter(Pavs(i),FundTone_OutFreq_dpd(i,j)+fsw_avg_offset(j),'+b')
+        % grid on
+        scatter(FundTone_In(i,j)+inp_off_avg(j),FundTone_Out(i,j)+output_off_avg(j),'r')
+        scatter(FundTone_InFreq(i,j)+inp_off_avg(j),FundTone_OutFreq(i,j)+output_off_avg(j),'+r')
         grid on
         hold off
-        nexttile(3)
-        hold on
-        scatter(Fo(j),FundTone_In(i,j)+inp_off_avg(j),'r')
-        scatter(Fo(j),FundTone_InFreq(i,j)+inp_off_avg(j),'+r')
-        scatter(Fo(j),FundTone_In_dpd(i,j)+inp_off_avg(j),'b')
-        scatter(Fo(j),FundTone_InFreq_dpd(i,j)+inp_off_avg(j),'+b')
-        grid on
-        hold off
-        nexttile(4)
-        hold on
-        scatter(Fo(j),FundTone_Out(i,j)+fsw_avg_offset(j),'r')
-        scatter(Fo(j),FundTone_OutFreq(i,j)+fsw_avg_offset(j),'+r')
-        scatter(Fo(j),FundTone_Out_dpd(i,j)+fsw_avg_offset(j),'b')
-        scatter(Fo(j),FundTone_OutFreq_dpd(i,j)+fsw_avg_offset(j),'+b')
-        grid on
-        hold off
+        % nexttile(3)
+        % hold on
+        % scatter(Fo(j),FundTone_In(i,j)+inp_off_avg(j),'r')
+        % scatter(Fo(j),FundTone_InFreq(i,j)+inp_off_avg(j),'+r')
+        % scatter(Fo(j),FundTone_In_dpd(i,j)+inp_off_avg(j),'b')
+        % scatter(Fo(j),FundTone_InFreq_dpd(i,j)+inp_off_avg(j),'+b')
+        % scatter(FundTone_In(i,j)+inp_off_avg(j),adjpow_lower(i,j),'r')
+        % scatter(FundTone_In(i,j)+inp_off_avg(j),adjpow_upper(i,j),'b')
+        % grid on
+        % hold off
+        % nexttile(4)
+        % hold on
+        % scatter(Fo(j),FundTone_Out(i,j)+fsw_avg_offset(j),'r')
+        % scatter(Fo(j),FundTone_OutFreq(i,j)+fsw_avg_offset(j),'+r')
+        % scatter(Fo(j),FundTone_Out_dpd(i,j)+fsw_avg_offset(j),'b')
+        % scatter(Fo(j),FundTone_OutFreq_dpd(i,j)+fsw_avg_offset(j),'+b')
+        % grid on
+        % hold off
 
         waitbar(idx./prod(size_eng),h,'Testing Sweep in Progress...')
         idx = idx + 1;
@@ -275,7 +300,7 @@ message = sprintf('CONF:GEN:RFO:STAT OFF;*WAI'); %turn off RF
 fprintf(FSW,message);
 message = sprintf('CONF:GEN:POW:LEV %f;*WAI',-60); % set the power to something low
 fprintf(FSW,message);
-
+disp("SWEEP OVER")
 close(h) %close waitbar
             
 %% Safe Bench Equipment
@@ -283,7 +308,7 @@ NRP_Close( NRP67T ) % coupler power meter
 NRP67T_Close( NRX ) %output power meter
 N6705A_Close( N6705A ) % DC Supply (this does not turn it off - it just terminates the remote connection)
 FSW_Close(FSW) % FSW spectrum analyzer
-SMJ100A_Close( SMJ100A ) % Vector Signal Generator
+SMJ100A_Close( SMW ) % Vector Signal Generator
 
 %% Calculate Pout, Gain, PAE no DPD
 % Scale these as necessary

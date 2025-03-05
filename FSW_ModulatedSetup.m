@@ -34,53 +34,53 @@ function FSW_ModulatedSetup(FSW,SMW,Fo,pwr,BW)
     message = sprintf('INIT:CONT ON'); % set amplifier channel to continuous mode
     fprintf(FSW,message);
     pause(2)
-    message = sprintf('INIT:CONT OFF'); % turn off cont mode for single measurement
-    fprintf(FSW,message);
-    message = sprintf('CALC1:MARK1:MAX'); %move marker to peak power of spectrum
-    fprintf(FSW,message);
-    message = sprintf('CALC1:MARK1:Y?'); %Grab the power level at the peak power
-    lvl = str2double(query(FSW,message));
-    lvl=lvl+1;
-    message = sprintf('INIT:CONT ON'); % set amplifier channel to continuous mode
-    fprintf(FSW,message);
-    message = sprintf(['DISP:WIND:TRAC:Y:SCAL:RLEV ', num2str(lvl)]); %set ref level in amp channel
-    fprintf(FSW,message);
+    % message = sprintf('INIT:CONT OFF'); % turn off cont mode for single measurement
+    % fprintf(FSW,message);
+    % message = sprintf('CALC1:MARK1:MAX'); %move marker to peak power of spectrum
+    % fprintf(FSW,message);
+    % message = sprintf('CALC1:MARK1:Y?'); %Grab the power level at the peak power
+    % lvl = str2double(query(FSW,message));
+    % lvl=lvl+3;
+    % message = sprintf('INIT:CONT ON'); % set amplifier channel to continuous mode
+    % fprintf(FSW,message);
+    % message = sprintf(['DISP:WIND:TRAC:Y:SCAL:RLEV ', num2str(lvl)]); %set ref level in amp channel
+    % fprintf(FSW,message);
     
     %set level in spectrum
     %channels should already be setup
-    message = sprintf('INST:SEL SAN'); % back to the Spectrum
-    fprintf(FSW,message);
-    message = sprintf(['SENS:FREQ:CENT ', num2str(Fo)]); %set center freq
-    fprintf(FSW,message);
-    pause(1)
-  
-    message = sprintf(['DISP:WIND:TRAC:Y:SCAL:RLEV ', num2str(0)]); % set ref level high initially
-    fprintf(FSW,message);
+    % message = sprintf('INST:SEL SAN'); % back to the Spectrum
+    % fprintf(FSW,message);
+    % message = sprintf(['SENS:FREQ:CENT ', num2str(Fo)]); %set center freq
+    % fprintf(FSW,message);
+    % pause(1)
+    % 
+    % message = sprintf(['DISP:WIND:TRAC:Y:SCAL:RLEV ', num2str(0)]); % set ref level high initially
+    % fprintf(FSW,message);
     %do all the channel settings
-    message = sprintf('SENS:POW:ACH:TXCH:COUN 1'); %1 tx channel
-    fprintf(FSW,message);
-    message = sprintf('SENS:POW:ACH:ACP 1'); %1 adj channel
-    fprintf(FSW,message);
-    message = sprintf(['SENS:POW:ACH:BWID:CHAN1 ', num2str(BW)]); %Tx channel BW
-    fprintf(FSW,message);
-    message = sprintf(['SENS:POW:ACH:BWID:ACH ', num2str(BW)]); %Adj channel BW
-    fprintf(FSW,message);
-    message = sprintf(['SENS:POW:ACH:SPAC:ACH ', num2str(BW)]); %Adj channel spacing
-    fprintf(FSW,message);
-    message = sprintf('INIT:CONT ON'); % set spectrum channel to continuous mode
-    fprintf(FSW,message);
-    message = sprintf(['SENS:FREQ:SPAN ', num2str((BW*3) + (BW/10))]); %set span
-    fprintf(FSW,message);
-    pause(1)  
-    message = sprintf('INIT:CONT OFF'); % turn off cont mode for single measurement
-    fprintf(FSW,message);
-    message = sprintf('CALC1:MARK1:MAX'); %move marker to peak power of spectrum
-    fprintf(FSW,message);
-    message = sprintf('CALC1:MARK1:Y?'); %Grab the power level at the peak power
-    lvl = str2double(query(FSW,message));
-    lvl=lvl+1;
-    message = sprintf('INIT:CONT ON'); % set spec channel to continuous mode
-    fprintf(FSW,message);
-    message = sprintf(['DISP:WIND:TRAC:Y:SCAL:RLEV ', num2str(lvl)]); %set ref level in specan channel
-    fprintf(FSW,message);
+    % message = sprintf('SENS:POW:ACH:TXCH:COUN 1'); %1 tx channel
+    % fprintf(FSW,message);
+    % message = sprintf('SENS:POW:ACH:ACP 1'); %1 adj channel
+    % fprintf(FSW,message);
+    % message = sprintf(['SENS:POW:ACH:BWID:CHAN1 ', num2str(BW)]); %Tx channel BW
+    % fprintf(FSW,message);
+    % message = sprintf(['SENS:POW:ACH:BWID:ACH ', num2str(BW)]); %Adj channel BW
+    % fprintf(FSW,message);
+    % message = sprintf(['SENS:POW:ACH:SPAC:ACH ', num2str(BW)]); %Adj channel spacing
+    % fprintf(FSW,message);
+    % message = sprintf('INIT:CONT ON'); % set spectrum channel to continuous mode
+    % fprintf(FSW,message);
+    % message = sprintf(['SENS:FREQ:SPAN ', num2str((BW*3) + (BW/10))]); %set span
+    % fprintf(FSW,message);
+    % pause(1)  
+    % message = sprintf('INIT:CONT OFF'); % turn off cont mode for single measurement
+    % fprintf(FSW,message);
+    % message = sprintf('CALC1:MARK1:MAX'); %move marker to peak power of spectrum
+    % fprintf(FSW,message);
+    % message = sprintf('CALC1:MARK1:Y?'); %Grab the power level at the peak power
+    % lvl = str2double(query(FSW,message));
+    % lvl=lvl+3;
+    % message = sprintf('INIT:CONT ON'); % set spec channel to continuous mode
+    % fprintf(FSW,message);
+    % message = sprintf(['DISP:WIND:TRAC:Y:SCAL:RLEV ', num2str(lvl)]); %set ref level in specan channel
+    % fprintf(FSW,message);
 end
