@@ -45,7 +45,9 @@ output_off_avg = mean(output_atten(size(output_atten,2)-5:end,:),1);
 %take into account approximate adapter losses
 output_adapter_loss = 0.17;
 input_adapter_loss = 0.1;
+output_off_avg = output_off_avg(output_off_avg~=0);
 output_off_avg = output_off_avg - output_adapter_loss;
+inp_off_avg = inp_off_avg(inp_off_avg~=0);
 inp_off_avg = inp_off_avg + input_adapter_loss;
 %load Pdes for replication in next section
 Pdes_cw_s = load("driveup_38_40GHz.mat","Pdes");
@@ -57,6 +59,10 @@ freq_cw = freq_cw_s.Fo;
 Attenuation_scaled = repmat(output_off_avg, length(Pdes_cw), 1); % Output Attenuation
 InputOffsets_scaled = repmat(inp_off_avg, length(Pdes_cw), 1); % Input Offsets
 
+FundTone_out_cw = FundTone_out_cw(:,1:numel(freq_cw));
+FundTone_outFreq_cw = FundTone_outFreq_cw(:,1:numel(freq_cw));
+FundTone_outFreq2_cw = FundTone_outFreq2_cw(:,1:numel(freq_cw));
+
 Pout1 = FundTone_out_cw + Attenuation_scaled; % Use whichever measured power you want. Or all of them.
 Pout2 = FundTone_outFreq_cw + Attenuation_scaled; % Use whichever measured power you want. Or all of them.
 Pout3 = FundTone_outFreq2_cw + Attenuation_scaled; % Use whichever measured power you want. Or all of them.
@@ -64,6 +70,10 @@ Pout3 = FundTone_outFreq2_cw + Attenuation_scaled; % Use whichever measured powe
 Pout_watts1 = 10.^(Pout1./10)./1000;
 Pout_watts2 = 10.^(Pout2./10)./1000;
 Pout_watts3 = 10.^(Pout3./10)./1000;
+
+FundTone_In_cw = FundTone_In_cw(:,1:numel(freq_cw));
+FundTone_InFreq_cw = FundTone_InFreq_cw(:,1:numel(freq_cw));
+FundTone_InFreq2_cw = FundTone_InFreq2_cw(:,1:numel(freq_cw));
 
 Pin1 = FundTone_In_cw + InputOffsets_scaled;
 Pin2 = FundTone_InFreq_cw + InputOffsets_scaled;
@@ -82,6 +92,7 @@ Pdc_Gate2 = Vg2_eng_cw.*Ig2_eng_cw;
 Pdc_tot2 = Pdc_Drain2 + Pdc_Gate2;
 
 Pdc_tot = Pdc_tot1 + Pdc_tot2;
+Pdc_tot = Pdc_tot(:,1:numel(freq_cw));
 
 DE1 = (Pout_watts1./Pdc_tot).*100;
 PAE1 = ((Pout_watts1-Pin_watts1)./Pdc_tot).*100;
@@ -167,128 +178,144 @@ title("S-Parameters Meas. and Sim")
 hold off
 
 %% Modulated Measurements
-%plot Pout, PAEavg, ACPR, EVM, Gain(?) over freq
-%keep Pav ~constant at good power level
-% can include direct dpd if it makes things look better
+close all
 %get all the data from the modulated meas workspace
-Pout1_mod_s = load("Modulated_Meas_WS.mat","Pout1");
-Pout1_mod = Pout1_mod_s.Pout1;
-Pout1_mod_dpd_s = load("Modulated_Meas_WS.mat","Pout1_dpd");
-Pout1_mod_dpd = Pout1_mod_dpd_s.Pout1_dpd;
-Gain1_mod_s = load("Modulated_Meas_WS.mat","Gain1");
-Gain1_mod = Gain1_mod_s.Gain1;
-Gain1_mod_dpd_s = load("Modulated_Meas_WS.mat","Gain1_dpd");
-Gain1_mod_dpd = Gain1_mod_dpd_s.Gain1_dpd;
-freq_mod_s = load("Modulated_Meas_WS.mat","Fo");
-freq_mod = freq_mod_s.Fo;
-PAE1_mod_s = load("Modulated_Meas_WS.mat","PAE1");
-PAE1_mod = PAE1_mod_s.PAE1;
-PAE1_mod_dpd_s = load("Modulated_Meas_WS.mat","PAE1_dpd");
-PAE1_mod_dpd = PAE1_mod_dpd_s.PAE1_dpd;
+freq_mod = load("PowerMeter_modulated_3-5-2025.mat","Fo").Fo;
+Pdes_mod = load("PowerMeter_modulated_3-5-2025.mat","Pdes").Pdes;
 
-ACPR_L_S = load("Modulated_Meas_WS.mat","adjpow_lower");
+FundTone_Out_mod = load("PowerMeter_modulated_3-5-2025.mat","FundTone_Out").FundTone_Out;
+CW_output_offset_mod = repmat(output_off_avg, length(Pdes_mod), 1);
+Pout1_mod = FundTone_Out_mod + CW_output_offset_mod;
+Pout1_watts_mod = 10.^(Pout1_mod./10)./1000;
+
+FundTone_In_mod = load("PowerMeter_modulated_3-5-2025.mat","FundTone_In").FundTone_In;
+CW_input_offset_mod = repmat(inp_off_avg, length(Pdes_mod), 1);
+Pin1_mod = FundTone_In_mod + CW_input_offset_mod;
+Mod_Pin1_watts = 10.^(Pin1_mod./10)./1000;
+
+Mod_PDC = load("PowerMeter_modulated_3-5-2025.mat","Pdc_tot").Pdc_tot;
+
+DE1_mod = (Pout1_watts_mod./Mod_PDC).*100;
+PAE1_mod = ((Pout1_watts_mod-Mod_Pin1_watts)./Mod_PDC).*100;
+Gain1_mod = Pout1_mod - Pin1_mod;
+
+% Pout1_mod = load("PowerMeter_modulated_3-5-2025.mat","Pout1").Pout1;
+% Gain1_mod = load("PowerMeter_modulated_3-5-2025.mat","Gain1").Gain1;
+% PAE1_mod = load("PowerMeter_modulated_3-5-2025.mat","PAE1").PAE1;
+% Pout1_mod = Pout1_mod_s.Pout1;
+% Pout1_mod_dpd_s = load("Modulated_Meas_WS.mat","Pout1_dpd");
+% Pout1_mod_dpd = Pout1_mod_dpd_s.Pout1_dpd;
+% Gain1_mod_s = load("Modulated_Meas_WS.mat","Gain1");
+% Gain1_mod = Gain1_mod_s.Gain1;
+% Gain1_mod_dpd_s = load("Modulated_Meas_WS.mat","Gain1_dpd");
+% Gain1_mod_dpd = Gain1_mod_dpd_s.Gain1_dpd;
+% freq_mod_s = load("Modulated_Meas_WS.mat","Fo");
+% freq_mod = freq_mod_s.Fo;
+% PAE1_mod_s = load("Modulated_Meas_WS.mat","PAE1");
+% PAE1_mod = PAE1_mod_s.PAE1;
+% PAE1_mod_dpd_s = load("Modulated_Meas_WS.mat","PAE1_dpd");
+% PAE1_mod_dpd = PAE1_mod_dpd_s.PAE1_dpd;
+
+ACPR_L_S = load("FSW_modulated_3-5-2025.mat","adjpow_lower");
 ACPR_L = ACPR_L_S.adjpow_lower;
-ACPR_L_DPD_S = load("Modulated_Meas_WS.mat","adjpow_lower_dpd");
-ACPR_L_DPD = ACPR_L_DPD_S.adjpow_lower_dpd;
+% ACPR_L_DPD_S = load("Modulated_Meas_WS.mat","adjpow_lower_dpd");
+% ACPR_L_DPD = ACPR_L_DPD_S.adjpow_lower_dpd;
 
-ACPR_U_S = load("Modulated_Meas_WS.mat","adjpow_upper");
+ACPR_U_S = load("FSW_modulated_3-5-2025.mat","adjpow_upper");
 ACPR_U = ACPR_U_S.adjpow_upper;
-ACPR_U_DPD_S = load("Modulated_Meas_WS.mat","adjpow_upper_dpd");
-ACPR_U_DPD = ACPR_U_DPD_S.adjpow_upper_dpd;
+% ACPR_U_DPD_S = load("Modulated_Meas_WS.mat","adjpow_upper_dpd");
+% ACPR_U_DPD = ACPR_U_DPD_S.adjpow_upper_dpd;
 
-EVM_s = load("Modulated_Meas_WS.mat","EVM");
+EVM_s = load("FSW_modulated_3-5-2025.mat","EVM");
 EVM = EVM_s.EVM;
-EVM_dpd_s = load("Modulated_Meas_WS.mat","EVM_dpd");
-EVM_dpd = EVM_dpd_s.EVM_dpd;
+% EVM_dpd_s = load("Modulated_Meas_WS.mat","EVM_dpd");
+% EVM_dpd = EVM_dpd_s.EVM_dpd;
+
+CFAC_out = load("FSW_modulated_3-5-2025.mat","CFAC_out").CFAC_out;
 
 figure
 tiledlayout("flow")
-nexttile
-hold on
-yyaxis left
+
 for i = 1:1:numel(freq_mod)
-    plot(Pout1_mod(:,i),Gain1_mod(:,i),'LineStyle','-','DisplayName',num2str(freq_mod(i)/1e9)+" GHz NDPD")
-    plot(Pout1_mod_dpd(:,i),Gain1_mod_dpd(:,i),'LineStyle','--','DisplayName',num2str(freq_mod(i)/1e9)+" GHz DPD")
+    nexttile
+    hold on
+    title("Modulated Gain, PAE at "+num2str(freq_mod(i)/1e9)+ " GHz")
+    yyaxis left
+    ylim([0 25])
+    yticks(0:2.5:25)
+    xlim([16 30])
+    xlabel('Pout (dBm)')
+    ylabel('Gain (dB)')
+    plot(Pout1_mod(:,i),Gain1_mod(:,i),'LineStyle','-','DisplayName',"Mod. Gain "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
+    plot(Pout1(:,i),Gain1(:,i),'LineStyle','--','DisplayName',"CW Gain "+num2str(freq_mod(i)/1e9)+" GHz")
+    yyaxis right
+    plot(Pout1_mod(:,i),PAE1_mod(:,i),'LineStyle','-','DisplayName',"Mod. PAE "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
+    plot(Pout1(:,i),PAE1(:,i), 'LineStyle','--','DisplayName',"CW PAE "+num2str(freq_mod(i)/1e9)+" GHz")
+    ylabel('Efficiency (%)')
+    grid on
+    legend
+    ylim([0 30])
+    yticks(0:3:30)
+    hold off
 end
-xlabel('Pout (dBm)')
-ylabel('Gain (dB)')
-yyaxis right
-for i = 1:1:numel(freq_mod)
-    plot(Pout1_mod(:,i),PAE1_mod(:,i),'LineStyle','-','DisplayName',num2str(freq_mod(i)/1e9)+" GHz NDPD")
-    plot(Pout1_mod_dpd(:,i),PAE1_mod_dpd(:,i),'LineStyle','--','DisplayName',num2str(freq_mod(i)/1e9)+" GHz DPD")
-end
-ylabel('Efficiency (%)')
-yticks(1:0.5:4.5)
-ylim([1 4.5])
-grid on
-legend
-title("Modulated Gain, PAE")
-hold off
 
 %ACPR
-nexttile
-hold on
-for i = 1:1:numel(freq_mod)
-    plot(Pout1_mod(:,i),ACPR_L(:,i),'LineStyle','-','DisplayName',num2str(freq_mod(i)/1e9)+" GHz NDPD")
-    plot(Pout1_mod_dpd(:,i),ACPR_L_DPD(:,i),'LineStyle','--','DisplayName',num2str(freq_mod(i)/1e9)+" GHz DPD")
-end
-xlabel('Pout (dBm)')
-ylabel('ACPR Lower (dBc)')
-grid on
-legend
-hold off
-
-nexttile
-hold on
-for i = 1:1:numel(freq_mod)
-    plot(Pout1_mod(:,i),ACPR_U(:,i),'LineStyle','-','DisplayName',num2str(freq_mod(i)/1e9)+" GHz NDPD")
-    plot(Pout1_mod_dpd(:,i),ACPR_U_DPD(:,i),'LineStyle','--','DisplayName',num2str(freq_mod(i)/1e9)+" GHz DPD")
-end
-xlabel('Pout (dBm)')
-ylabel('ACPR Upper (dBc)')
-grid on
-legend
-hold off
-
-%EVM
-nexttile
-hold on
-for i = 1:1:numel(freq_mod)
-    plot(Pout1_mod(:,i),EVM(:,i),'LineStyle','-','DisplayName',num2str(freq_mod(i)/1e9)+" GHz NDPD")
-    plot(Pout1_mod_dpd(:,i),EVM_dpd(:,i),'LineStyle','--','DisplayName',num2str(freq_mod(i)/1e9)+" GHz DPD")
-end
-xlabel('Pout (dBm)')
-ylabel('EVM (%)')
-grid on
-legend
-hold off
-
-%% next, choose a pout that has decent efficiency and linearity and plot over frequency
-close all
 figure
 tiledlayout("flow")
 
-nexttile
-hold on
-%effic, gain at one freq
-yyaxis left
-yticks(8:1:14)
-ylim([8 14])
-f_log = (freq_mod == (38e9));
-plot(Pout1_mod(:,f_log),Gain1_mod(:,f_log),'LineStyle','-','DisplayName',"Gain "+num2str(freq_mod(f_log)/1e9)+" GHz NDPD")
-plot(Pout1_mod_dpd(:,f_log),Gain1_mod_dpd(:,f_log),'LineStyle','--','DisplayName',"Gain "+num2str(freq_mod(f_log)/1e9)+" GHz DPD")
-xlabel('Pout (dBm)')
-ylabel('Gain (dB)')
-yyaxis right
-plot(Pout1_mod(:,f_log),PAE1_mod(:,f_log),'LineStyle','-','DisplayName',"PAE "+num2str(freq_mod(f_log)/1e9)+" GHz NDPD")
-plot(Pout1_mod_dpd(:,f_log),PAE1_mod_dpd(:,f_log),'LineStyle','--','DisplayName',"PAE " + num2str(freq_mod(f_log)/1e9)+" GHz DPD")
-ylabel('Efficiency (%)')
-yticks(1:0.5:4)
-ylim([1 4])
-grid on
-legend
-title("Modulated Gain, PAE")
-hold off
+for i = 1:1:numel(freq_mod)
+    nexttile
+    hold on
+    title("ACPR "+num2str(freq_mod(i)/1e9)+" GHz")
+    plot(Pout1_mod(:,i),ACPR_L(:,i),'Color','r','DisplayName',"ACPR Lower "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
+    plot(Pout1_mod(:,i),ACPR_U(:,i),'Color','b','DisplayName',"ACPR Upper "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
+    xlabel('Pout (dBm)')
+    ylabel('ACPR Lower (dBc)')
+    xlim([18 30])
+    ylim([-40 -15])
+    yticks(-40:5:-15)
+    grid on
+    legend
+    hold off
+end
+
+%EVM
+figure
+tiledlayout("flow")
+
+for i = 1:1:numel(freq_mod)
+    nexttile
+    hold on
+    title("EVM "+num2str(freq_mod(i)/1e9)+" GHz")
+    plot(Pout1_mod(:,i),EVM(:,i),'LineStyle','-','DisplayName',"EVM "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
+    xlabel('Pout (dBm)')
+    ylabel('EVM (%)')
+    xlim([18 30])
+    ylim([0 25])
+    yticks(0:5:25)
+    grid on
+    legend
+    hold off
+end
+
+%CFAC
+figure
+tiledlayout("flow")
+
+for i = 1:1:numel(freq_mod)
+    nexttile
+    hold on
+    title("CFAC Out "+num2str(freq_mod(i)/1e9)+" GHz")
+    plot(Pout1_mod(:,i),CFAC_out(:,i),'LineStyle','-','DisplayName',"CFAC Out "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
+    xlabel('Pout (dBm)')
+    ylabel('CFAC Out (dB)')
+    xlim([18 30])
+    ylim([0 10])
+    yticks(0:1:10)
+    grid on
+    legend
+    hold off
+end
 
 %% plot Coupled power vs. SMW power for modulated and CW measurements for sanity check
 close all
@@ -297,10 +324,13 @@ Pcoupled_cw = Pcoupled_cw_s.FundTone_In;
 SMW_power_cw_s = load("driveup_38_40GHz.mat","Pavs");
 SMW_power_cw = SMW_power_cw_s.Pavs;
 Pcoupled_cw = Pcoupled_cw(:,1:size(SMW_power_cw,2));
-Pcoupled_mod_s = load("Modulated_Meas_WS.mat","FundTone_In");
+Pcoupled_mod_s = load("PowerMeter_modulated_3-5-2025.mat","FundTone_In");
 Pcoupled_mod = Pcoupled_mod_s.FundTone_In;
-SMW_power_mod_s = load("Modulated_Meas_WS.mat","Pavs");
+SMW_power_mod_s = load("PowerMeter_modulated_3-5-2025.mat","Pavs");
 SMW_power_mod = SMW_power_mod_s.Pavs;
+
+OutputCoupled_cw = load("driveup_38_40GHz.mat","FundTone_Out").FundTone_Out;
+OutputCoupled_cw = OutputCoupled_cw(:,1:size(SMW_power_cw,2));
 
 figure
 tiledlayout("flow")
@@ -317,85 +347,194 @@ for i = 1:length(freq_cw)
     hold off
 end
 
-%apply CW offset to Modulated measurement readings
-
-% output powers
-Mod_Tone_Out1_s = load("Modulated_Meas_WS.mat","FundTone_Out");
-Mod_Tone_Out1 = Mod_Tone_Out1_s.FundTone_Out;
-Mod_Tone_Out2_s = load("Modulated_Meas_WS.mat","FundTone_OutFreq");
-Mod_Tone_Out2 = Mod_Tone_Out2_s.FundTone_OutFreq;
-Mod_Tone_Out1_dpd_s = load("Modulated_Meas_WS.mat","FundTone_Out_dpd");
-Mod_Tone_Out1_dpd = Mod_Tone_Out1_dpd_s.FundTone_Out_dpd;
-Mod_Tone_Out2_dpd_s = load("Modulated_Meas_WS.mat","FundTone_OutFreq_dpd");
-Mod_Tone_Out2_dpd = Mod_Tone_Out2_dpd_s.FundTone_OutFreq_dpd;
-%DC powers
-Mod_PDC_s = load("Modulated_Meas_WS.mat","Pdc_tot");
-Mod_PDC = Mod_PDC_s.Pdc_tot;
-%input powers
-%no dpd
-Mod_Pin1 = load("Modulated_Meas_WS.mat","Pin1").Pin1;
-Mod_Pin1_watts = load("Modulated_Meas_WS.mat","Pin1_watts").Pin1_watts;
-Mod_Pin2 = load("Modulated_Meas_WS.mat","Pin2").Pin2;
-Mod_Pin2_watts = load("Modulated_Meas_WS.mat","Pin2_watts").Pin2_watts;
-%dpd
-Mod_Pin1_dpd = load("Modulated_Meas_WS.mat","Pin1_dpd").Pin1_dpd;
-Mod_Pin1_watts_dpd = load("Modulated_Meas_WS.mat","Pin1_watts_dpd").Pin1_watts_dpd;
-Mod_Pin2_dpd = load("Modulated_Meas_WS.mat","Pin2_dpd").Pin2_dpd;
-Mod_Pin2_watts_dpd = load("Modulated_Meas_WS.mat","Pin2_watts_dpd").Pin2_watts_dpd;
-
-%CW output atten
-CW_offset_s = load("Modulated_Meas_WS.mat","Attenuation_scaled");
-CW_offset = CW_offset_s.Attenuation_scaled;
-%no dpd
-Pout1_mod = Mod_Tone_Out1 + CW_offset;
-Pout1_watts_mod = 10.^(Pout1_mod./10)./1000;
-Pout2_mod = Mod_Tone_Out2 +  CW_offset;
-Pout2_watts_mod = 10.^(Pout2_mod./10)./1000;
-%dpd
-Pout1_dpd_mod = Mod_Tone_Out1_dpd + CW_offset;
-Pout1_watts_dpd_mod = 10.^(Pout1_dpd_mod./10)./1000;
-Pout2_dpd_mod = Mod_Tone_Out2_dpd + CW_offset;
-Pout2_watts_dpd_mod = 10.^(Pout2_dpd_mod./10)./1000;
-
-%calc effic and gain with cw offset
-%no dpd
-DE1_mod = (Pout1_watts_mod./Mod_PDC).*100;
-PAE1_mod = ((Pout1_watts_mod-Mod_Pin1_watts)./Mod_PDC).*100;
-Gain1_mod = Pout1_mod - Mod_Pin1;
-
-DE2_mod = (Pout2_watts_mod./Mod_PDC).*100;
-PAE2_mod = ((Pout2_watts_mod-Mod_Pin2_watts)./Mod_PDC).*100;
-Gain2_mod = Pout2_mod - Mod_Pin2;
-%dpd
-DE1_mod_dpd = (Pout1_watts_dpd_mod./Mod_PDC).*100;
-PAE1_mod_dpd = ((Pout1_watts_dpd_mod-Mod_Pin1_watts_dpd)./Mod_PDC).*100;
-Gain1_mod_dpd = Pout1_dpd_mod - Mod_Pin1_dpd;
-
-DE2_mod_dpd = (Pout2_watts_dpd_mod./Mod_PDC).*100;
-PAE2_mod_dpd = ((Pout2_watts_dpd_mod-Mod_Pin2_watts_dpd)./Mod_PDC).*100;
-Gain2_mod_dpd = Pout2_dpd_mod - Mod_Pin2_dpd;
-%plot all this stuff
-
 figure
 tiledlayout("flow")
-for i = 1:1:numel(freq_cw)
+for i = 1:length(freq_cw)
     nexttile
-    title("Mod Gain, PAE at " + num2str(freq_cw(i) / 1e9) + " GHz")
     hold on
-    yyaxis left
-    xlabel("Pout (dBm)")
-    ylabel("Gain")
-    plot(Pout1_mod(:,i),Gain1_mod(:,i),'LineStyle','-','DisplayName','Gain NDPD')
-    plot(Pout1_dpd_mod(:,i),Gain1_mod_dpd(:,i),'LineStyle','--','DisplayName','Gain DPD')
-    % yticks(8:1:14)
-    % ylim([8 14])
-    yyaxis right
-    % yticks(1:0.5:4)
-    % ylim([1 4])
-    plot(Pout1_mod(:,i),PAE1_mod(:,i),'LineStyle','-','DisplayName','PAE NDPD')
-    plot(Pout1_dpd_mod(:,i),PAE1_mod_dpd(:,i),'LineStyle','--','DisplayName','PAE DPD')
-    ylabel("PAE (%)")
+    xlabel("SMW Power (dBm)")
+    ylabel("Output Power")
+    title("Output Power at " + num2str(freq_cw(i) / 1e9) + " GHz")
+    plot(SMW_power_cw(:,i),OutputCoupled_cw(:,i),'LineStyle','-','DisplayName','CW')
+    plot(SMW_power_mod(:,i),FundTone_Out_mod(:,i),'LineStyle','--','DisplayName','Mod')
+    ylim([-10 5])
+    yticks(-10:1:5)
     grid on
     legend
     hold off
 end
+
+%% plot linearity over freq for a given Pout
+pout_des = 26;
+EVM_freq = zeros(1, numel(freq_mod));
+ACPR_L_freq = zeros(1, numel(freq_mod));
+ACPR_U_freq = zeros(1, numel(freq_mod));
+PAE_freq = zeros(1, numel(freq_mod));
+Gain_freq = zeros(1, numel(freq_mod));
+Pout_freq = zeros(1, numel(freq_mod));
+tol = 0.2;
+for i = 1:numel(freq_mod)
+    col = Pout1_mod(:,i);
+    col_P = abs((col - pout_des)) < tol;
+    if sum(col_P) > 1
+        % tol=0.2;
+        diff_vector = abs((col - pout_des));
+        smallest = min(diff_vector);
+        col_P = abs(diff_vector - smallest) < 1e-6;
+        col_ACPR_L = ACPR_L(:,i);
+        ACPR_L_freq(i) = col_ACPR_L(col_P);
+        col_ACPR_U = ACPR_U(:,i);
+        ACPR_U_freq(i) = col_ACPR_U(col_P);
+        col_EVM = EVM(:,i);
+        EVM_freq(i) = col_EVM(col_P);
+        col_PAE = PAE1_mod(:,i);
+        PAE_freq(i) = col_PAE(col_P);
+        col_Gain = Gain1_mod(:,i);
+        Gain_freq(i) = col_Gain(col_P);
+        col_Pout = Pout1_mod(:,i);
+        Pout_freq(i) = col_Pout(col_P);
+    elseif sum(col_P) == 1
+        % tol=0.2;
+        col_ACPR_L = ACPR_L(:,i);
+        ACPR_L_freq(i) = col_ACPR_L(col_P);
+        col_ACPR_U = ACPR_U(:,i);
+        ACPR_U_freq(i) = col_ACPR_U(col_P);
+        col_EVM = EVM(:,i);
+        EVM_freq(i) = col_EVM(col_P);
+        col_PAE = PAE1_mod(:,i);
+        PAE_freq(i) = col_PAE(col_P);
+        col_Gain = Gain1_mod(:,i);
+        Gain_freq(i) = col_Gain(col_P);
+        col_Pout = Pout1_mod(:,i);
+        Pout_freq(i) = col_Pout(col_P);
+    else
+        % tol=tol+0.1;
+        error("no Pout within allowed tolerance")
+    end
+end
+
+%plot it
+figure
+tiledlayout("flow")
+nexttile
+hold on
+title("EVM at " + num2str(pout_des) + " dBm Output Power")
+plot(freq_mod ./ 1e9,EVM_freq)
+grid on
+xlabel("Frequency (GHz)")
+ylabel("EVM (%)")
+hold off
+nexttile
+hold on
+title("ACPR at " + num2str(pout_des) + " dBm Output Power")
+plot(freq_mod ./ 1e9,ACPR_U_freq,'DisplayName','ACPR Upper')
+plot(freq_mod ./ 1e9,ACPR_L_freq,'DisplayName','ACPR Lower')
+grid on
+xlabel("Frequency (GHz)")
+ylabel("ACPR (dBc)")
+legend
+hold off
+nexttile
+hold on
+title("Gain, PAE at " + num2str(pout_des) + " dBm Output Power")
+yyaxis left
+plot(freq_mod ./ 1e9,Gain_freq,'DisplayName','Gain')
+ylim([14 20]);
+yticks(14:1:20);
+ylabel("Gain (dB)")
+yyaxis right
+plot(freq_mod ./ 1e9,PAE_freq,'DisplayName','PAE')
+ylim([14 20]);
+yticks(14:1:20);
+yticks
+grid on
+xlabel("Frequency (GHz)")
+ylabel("PAE (%)")
+legend
+hold off
+
+%% output coupler power
+
+
+%apply CW offset to Modulated measurement readings
+
+% output powers
+% Mod_Tone_Out1_s = load("Modulated_Meas_WS.mat","FundTone_Out");
+% Mod_Tone_Out1 = Mod_Tone_Out1_s.FundTone_Out;
+% Mod_Tone_Out2_s = load("Modulated_Meas_WS.mat","FundTone_OutFreq");
+% Mod_Tone_Out2 = Mod_Tone_Out2_s.FundTone_OutFreq;
+% Mod_Tone_Out1_dpd_s = load("Modulated_Meas_WS.mat","FundTone_Out_dpd");
+% Mod_Tone_Out1_dpd = Mod_Tone_Out1_dpd_s.FundTone_Out_dpd;
+% Mod_Tone_Out2_dpd_s = load("Modulated_Meas_WS.mat","FundTone_OutFreq_dpd");
+% Mod_Tone_Out2_dpd = Mod_Tone_Out2_dpd_s.FundTone_OutFreq_dpd;
+%DC powers
+% Mod_PDC_s = load("Modulated_Meas_WS.mat","Pdc_tot");
+% Mod_PDC = Mod_PDC_s.Pdc_tot;
+%input powers
+%no dpd
+% Mod_Pin1 = load("Modulated_Meas_WS.mat","Pin1").Pin1;
+% Mod_Pin1_watts = load("Modulated_Meas_WS.mat","Pin1_watts").Pin1_watts;
+% Mod_Pin2 = load("Modulated_Meas_WS.mat","Pin2").Pin2;
+% Mod_Pin2_watts = load("Modulated_Meas_WS.mat","Pin2_watts").Pin2_watts;
+% %dpd
+% Mod_Pin1_dpd = load("Modulated_Meas_WS.mat","Pin1_dpd").Pin1_dpd;
+% Mod_Pin1_watts_dpd = load("Modulated_Meas_WS.mat","Pin1_watts_dpd").Pin1_watts_dpd;
+% Mod_Pin2_dpd = load("Modulated_Meas_WS.mat","Pin2_dpd").Pin2_dpd;
+% Mod_Pin2_watts_dpd = load("Modulated_Meas_WS.mat","Pin2_watts_dpd").Pin2_watts_dpd;
+
+%CW output atten
+% CW_offset_s = load("Modulated_Meas_WS.mat","Attenuation_scaled");
+% CW_offset = CW_offset_s.Attenuation_scaled;
+% %no dpd
+% Pout1_mod = Mod_Tone_Out1 + CW_offset;
+% Pout1_watts_mod = 10.^(Pout1_mod./10)./1000;
+% Pout2_mod = Mod_Tone_Out2 +  CW_offset;
+% Pout2_watts_mod = 10.^(Pout2_mod./10)./1000;
+% %dpd
+% Pout1_dpd_mod = Mod_Tone_Out1_dpd + CW_offset;
+% Pout1_watts_dpd_mod = 10.^(Pout1_dpd_mod./10)./1000;
+% Pout2_dpd_mod = Mod_Tone_Out2_dpd + CW_offset;
+% Pout2_watts_dpd_mod = 10.^(Pout2_dpd_mod./10)./1000;
+
+%calc effic and gain with cw offset
+%no dpd
+% DE1_mod = (Pout1_watts_mod./Mod_PDC).*100;
+% PAE1_mod = ((Pout1_watts_mod-Mod_Pin1_watts)./Mod_PDC).*100;
+% Gain1_mod = Pout1_mod - Mod_Pin1;
+% 
+% DE2_mod = (Pout2_watts_mod./Mod_PDC).*100;
+% PAE2_mod = ((Pout2_watts_mod-Mod_Pin2_watts)./Mod_PDC).*100;
+% Gain2_mod = Pout2_mod - Mod_Pin2;
+% %dpd
+% DE1_mod_dpd = (Pout1_watts_dpd_mod./Mod_PDC).*100;
+% PAE1_mod_dpd = ((Pout1_watts_dpd_mod-Mod_Pin1_watts_dpd)./Mod_PDC).*100;
+% Gain1_mod_dpd = Pout1_dpd_mod - Mod_Pin1_dpd;
+% 
+% DE2_mod_dpd = (Pout2_watts_dpd_mod./Mod_PDC).*100;
+% PAE2_mod_dpd = ((Pout2_watts_dpd_mod-Mod_Pin2_watts_dpd)./Mod_PDC).*100;
+% Gain2_mod_dpd = Pout2_dpd_mod - Mod_Pin2_dpd;
+%plot all this stuff
+
+% figure
+% tiledlayout("flow")
+% for i = 1:1:numel(freq_cw)
+%     nexttile
+%     title("Mod Gain, PAE at " + num2str(freq_cw(i) / 1e9) + " GHz")
+%     hold on
+%     yyaxis left
+%     xlabel("Pout (dBm)")
+%     ylabel("Gain")
+%     plot(Pout1_mod(:,i),Gain1_mod(:,i),'LineStyle','-','DisplayName','Gain NDPD')
+%     plot(Pout1_dpd_mod(:,i),Gain1_mod_dpd(:,i),'LineStyle','--','DisplayName','Gain DPD')
+%     % yticks(8:1:14)
+%     % ylim([8 14])
+%     yyaxis right
+%     % yticks(1:0.5:4)
+%     % ylim([1 4])
+%     plot(Pout1_mod(:,i),PAE1_mod(:,i),'LineStyle','-','DisplayName','PAE NDPD')
+%     plot(Pout1_dpd_mod(:,i),PAE1_mod_dpd(:,i),'LineStyle','--','DisplayName','PAE DPD')
+%     ylabel("PAE (%)")
+%     grid on
+%     legend
+%     hold off
+% end
