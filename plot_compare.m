@@ -119,12 +119,14 @@ nexttile
 hold on; box on; grid on; grid minor; set(gcf,'color','w')
 yyaxis left
 ylim([0 20])
+pbaspect([1 0.5 0.5])
 plot(pdel_ADS,Gain_ADS,'LineStyle','--','DisplayName','Sim Gain')
 plot(Pout1(:,11),Gain1(:,11),'LineStyle','-','DisplayName','Meas. Gain')
 % for i = 1:length(freq_cw)-1
 %     plot(Pout1(:,i),Gain1(:,i),'Color','r','DisplayName',"Gain at "+num2str(freq_cw(i)/1e9)+" GHz")
 % end
 ylabel('Gain (dB)')
+yticks(0:2:20)
 % ylim([4 13])
 xlim([16 30])
 yyaxis right
@@ -138,8 +140,10 @@ plot(Pout1(:,11),PAE1(:,11),'LineStyle','-','DisplayName','Meas. PAE')
 ylabel('PAE (%)')
 xlabel('Pout (dBm)')
 % legend("Sim Gain", "Meas Gain1", "Meas Gain2","Meas Gain3","Sim PAE", "Meas PAE1", "Meas PAE2","Meas PAE3")
-legend
+legend("Location","best")
 title("CW Measurements vs. Simulated (40 GHz)")
+saveas(gcf,fullfile("figures","pdf","CW_Measurements_vs_Simulated(40GHz).pdf"))
+saveas(gcf,fullfile("figures","svg","CW_Measurements_vs_Simulated(40GHz).svg"))
 hold off
 %% S-parameters plotting
 pth = "sparams_2stg.s2p";
@@ -157,7 +161,7 @@ s11s = params_sim(1,1,:);
 s21s = params_sim(2,1,:);
 s22s = params_sim(2,2,:);
 
-nexttile
+figure
 hold on
 plot(sp.Frequencies,20.*log10(abs(s11m(:))),'r','DisplayName','Meas. $S_{11}$','LineWidth',2)
 plot(sp.Frequencies,20.*log10(abs(s21m(:))),'g','DisplayName','Meas. $S_{21}$','LineWidth',2)
@@ -172,10 +176,13 @@ xticklabels({'30' '31' '32' '33' '34' '35' '36' '37' '38' '39' '40'})
 xlabel("Frequency (GHz)")
 ylabel("|S-Parameters| (dB)")
 grid on
-h=legend;
+h=legend("Location","best");
 set(h,'Interpreter','latex')
 title("S-Parameters Meas. and Sim")
 hold off
+pbaspect([1 0.5 0.5])
+saveas(gcf,fullfile("figures","pdf","Sparams_vs_Simulated.pdf"))
+saveas(gcf,fullfile("figures","svg","Sparams_vs_Simulated(40GHz).svg"))
 
 %% Modulated Measurements
 close all
@@ -233,40 +240,58 @@ EVM = EVM_s.EVM;
 
 CFAC_out = load("FSW_modulated_3-5-2025.mat","CFAC_out").CFAC_out;
 
-figure
-tiledlayout("flow")
+% figure
+% tiledlayout("flow")
 
 for i = 1:1:numel(freq_mod)
-    nexttile
+    %saving figures
+    % nexttile
+    figure
     hold on
-    title("Modulated Gain, PAE at "+num2str(freq_mod(i)/1e9)+ " GHz")
+    set(gcf,'Color','w')
+    box on
+    title("Gain, Avg. PAE, Output CF at "+num2str(freq_mod(i)/1e9)+ " GHz")
+    fname = "Modulated_Gain_PAE_"+num2str(freq_mod(i)/1e9)+ "_GHz";
     yyaxis left
     ylim([0 25])
     yticks(0:2.5:25)
-    xlim([16 30])
+    xlim([21 29])
     xlabel('Pout (dBm)')
-    ylabel('Gain (dB)')
-    plot(Pout1_mod(:,i),Gain1_mod(:,i),'LineStyle','-','DisplayName',"Mod. Gain "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
-    plot(Pout1(:,i),Gain1(:,i),'LineStyle','--','DisplayName',"CW Gain "+num2str(freq_mod(i)/1e9)+" GHz")
+    ylabel('Gain (dB), Avg. PAE (%)')
+    dname1 = "Gain";
+    plot(Pout1_mod(:,i),Gain1_mod(:,i),'LineStyle','-','DisplayName',dname1, 'LineWidth',2,'Color',[0 0.4470 0.7410])
+    dname2 = "Avg. PAE";
+    plot(Pout1_mod(:,i),PAE1_mod(:,i),'LineStyle','-','DisplayName',dname2,'LineWidth',2,'Color',[0.8500 0.3250 0.0980])
+    ax = gca;
+    ax.YColor = "k";
+
     yyaxis right
-    plot(Pout1_mod(:,i),PAE1_mod(:,i),'LineStyle','-','DisplayName',"Mod. PAE "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
-    plot(Pout1(:,i),PAE1(:,i), 'LineStyle','--','DisplayName',"CW PAE "+num2str(freq_mod(i)/1e9)+" GHz")
-    ylabel('Efficiency (%)')
+    plot(Pout1_mod(:,i),CFAC_out(:,i),'LineStyle','-','DisplayName',"Output CF",'LineWidth',2,'Color',[0.4940 0.1840 0.5560])
     grid on
-    legend
-    ylim([0 30])
-    yticks(0:3:30)
+    legend("Location","best")
+    ylim([0 10])
+    yticks(0:1:10)
+    ylabel('Output CF (dB)')
+    ax = gca;
+    ax.YColor = "k";
+    pbaspect([1 0.5 0.5])
     hold off
+    saveas(gcf,fullfile("figures","pdf",fname+".pdf"))
+    saveas(gcf,fullfile("figures","svg",fname+".svg"))
 end
 
 %ACPR
-figure
-tiledlayout("flow")
+% figure
+% tiledlayout("flow")
 
 for i = 1:1:numel(freq_mod)
-    nexttile
+    % nexttile
+    figure
     hold on
+    set(gcf,'Color','w')
+    box on
     title("ACPR "+num2str(freq_mod(i)/1e9)+" GHz")
+    fname = "ACPR_"+num2str(freq_mod(i)/1e9)+"_GHz";
     plot(Pout1_mod(:,i),ACPR_L(:,i),'Color','r','DisplayName',"ACPR Lower "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
     plot(Pout1_mod(:,i),ACPR_U(:,i),'Color','b','DisplayName',"ACPR Upper "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
     xlabel('Pout (dBm)')
@@ -275,109 +300,122 @@ for i = 1:1:numel(freq_mod)
     ylim([-40 -15])
     yticks(-40:5:-15)
     grid on
-    legend
+    legend("Location","best")
+    pbaspect([1 0.5 0.5])
     hold off
+    saveas(gcf,fullfile("figures","pdf",fname+".pdf"))
+    saveas(gcf,fullfile("figures","svg",fname+".svg"))
 end
 
 %EVM
-figure
-tiledlayout("flow")
+% figure
+% tiledlayout("flow")
 
-for i = 1:1:numel(freq_mod)
-    nexttile
-    hold on
-    title("EVM "+num2str(freq_mod(i)/1e9)+" GHz")
-    plot(Pout1_mod(:,i),EVM(:,i),'LineStyle','-','DisplayName',"EVM "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
-    xlabel('Pout (dBm)')
-    ylabel('EVM (%)')
-    xlim([18 30])
-    ylim([0 25])
-    yticks(0:5:25)
-    grid on
-    legend
-    hold off
-end
+% for i = 1:1:numel(freq_mod)
+%     % nexttile
+%     figure
+%     hold on
+%     title("EVM "+num2str(freq_mod(i)/1e9)+" GHz")
+%     fname = "EVM_"+num2str(freq_mod(i)/1e9)+"GHz";
+%     plot(Pout1_mod(:,i),EVM(:,i),'LineStyle','-','DisplayName',"EVM "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
+%     xlabel('Pout (dBm)')
+%     ylabel('EVM (%)')
+%     xlim([18 30])
+%     ylim([0 25])
+%     yticks(0:5:25)
+%     grid on
+%     legend("Location","best")
+%     hold off
+%     pbaspect([1 0.5 0.5])
+%     saveas(gcf,fullfile("figures","pdf",fname+".pdf"))
+%     saveas(gcf,fullfile("figures","svg",fname+".svg"))
+% end
 
 %CFAC
-figure
-tiledlayout("flow")
-
-for i = 1:1:numel(freq_mod)
-    nexttile
-    hold on
-    title("CFAC Out "+num2str(freq_mod(i)/1e9)+" GHz")
-    plot(Pout1_mod(:,i),CFAC_out(:,i),'LineStyle','-','DisplayName',"CFAC Out "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
-    xlabel('Pout (dBm)')
-    ylabel('CFAC Out (dB)')
-    xlim([18 30])
-    ylim([0 10])
-    yticks(0:1:10)
-    grid on
-    legend
-    hold off
-end
+% figure
+% tiledlayout("flow")
+% 
+% for i = 1:1:numel(freq_mod)
+%     % nexttile
+%     figure
+%     hold on
+%     title("CFAC Out "+num2str(freq_mod(i)/1e9)+" GHz")
+%     plot(Pout1_mod(:,i),CFAC_out(:,i),'LineStyle','-','DisplayName',"CFAC Out "+num2str(freq_mod(i)/1e9)+" GHz NDPD")
+%     xlabel('Pout (dBm)')
+%     ylabel('CFAC Out (dB)')
+%     xlim([18 30])
+%     ylim([0 10])
+%     yticks(0:1:10)
+%     grid on
+%     legend
+%     pbaspect([1 0.5 0.5])
+%     hold off
+% end
 
 %% plot Coupled power vs. SMW power for modulated and CW measurements for sanity check
-close all
-Pcoupled_cw_s = load("driveup_38_40GHz.mat","FundTone_In");
-Pcoupled_cw = Pcoupled_cw_s.FundTone_In;
-SMW_power_cw_s = load("driveup_38_40GHz.mat","Pavs");
-SMW_power_cw = SMW_power_cw_s.Pavs;
-Pcoupled_cw = Pcoupled_cw(:,1:size(SMW_power_cw,2));
-Pcoupled_mod_s = load("PowerMeter_modulated_3-5-2025.mat","FundTone_In");
-Pcoupled_mod = Pcoupled_mod_s.FundTone_In;
-SMW_power_mod_s = load("PowerMeter_modulated_3-5-2025.mat","Pavs");
-SMW_power_mod = SMW_power_mod_s.Pavs;
-
-OutputCoupled_cw = load("driveup_38_40GHz.mat","FundTone_Out").FundTone_Out;
-OutputCoupled_cw = OutputCoupled_cw(:,1:size(SMW_power_cw,2));
-
-figure
-tiledlayout("flow")
-for i = 1:length(freq_cw)
-    nexttile
-    hold on
-    xlabel("SMW Power (dBm)")
-    ylabel("Input Coupled Power")
-    title("Coupled Power at " + num2str(freq_cw(i) / 1e9) + " GHz")
-    plot(SMW_power_cw(:,i),Pcoupled_cw(:,i),'LineStyle','-','DisplayName','CW')
-    plot(SMW_power_mod(:,i),Pcoupled_mod(:,i),'LineStyle','--','DisplayName','Mod')
-    grid on
-    legend
-    hold off
-end
-
-figure
-tiledlayout("flow")
-for i = 1:length(freq_cw)
-    nexttile
-    hold on
-    xlabel("SMW Power (dBm)")
-    ylabel("Output Power")
-    title("Output Power at " + num2str(freq_cw(i) / 1e9) + " GHz")
-    plot(SMW_power_cw(:,i),OutputCoupled_cw(:,i),'LineStyle','-','DisplayName','CW')
-    plot(SMW_power_mod(:,i),FundTone_Out_mod(:,i),'LineStyle','--','DisplayName','Mod')
-    ylim([-10 5])
-    yticks(-10:1:5)
-    grid on
-    legend
-    hold off
-end
+% close all
+% Pcoupled_cw_s = load("driveup_38_40GHz.mat","FundTone_In");
+% Pcoupled_cw = Pcoupled_cw_s.FundTone_In;
+% SMW_power_cw_s = load("driveup_38_40GHz.mat","Pavs");
+% SMW_power_cw = SMW_power_cw_s.Pavs;
+% Pcoupled_cw = Pcoupled_cw(:,1:size(SMW_power_cw,2));
+% Pcoupled_mod_s = load("PowerMeter_modulated_3-5-2025.mat","FundTone_In");
+% Pcoupled_mod = Pcoupled_mod_s.FundTone_In;
+% SMW_power_mod_s = load("PowerMeter_modulated_3-5-2025.mat","Pavs");
+% SMW_power_mod = SMW_power_mod_s.Pavs;
+% 
+% OutputCoupled_cw = load("driveup_38_40GHz.mat","FundTone_Out").FundTone_Out;
+% OutputCoupled_cw = OutputCoupled_cw(:,1:size(SMW_power_cw,2));
+% 
+% figure
+% tiledlayout("flow")
+% for i = 1:length(freq_cw)
+%     nexttile
+%     hold on
+%     xlabel("SMW Power (dBm)")
+%     ylabel("Input Coupled Power")
+%     title("Coupled Power at " + num2str(freq_cw(i) / 1e9) + " GHz")
+%     plot(SMW_power_cw(:,i),Pcoupled_cw(:,i),'LineStyle','-','DisplayName','CW')
+%     plot(SMW_power_mod(:,i),Pcoupled_mod(:,i),'LineStyle','--','DisplayName','Mod')
+%     grid on
+%     legend
+%     pbaspect([1 0.5 0.5])
+%     hold off
+% end
+% 
+% figure
+% tiledlayout("flow")
+% for i = 1:length(freq_cw)
+%     nexttile
+%     hold on
+%     xlabel("SMW Power (dBm)")
+%     ylabel("Output Power")
+%     title("Output Power at " + num2str(freq_cw(i) / 1e9) + " GHz")
+%     plot(SMW_power_cw(:,i),OutputCoupled_cw(:,i),'LineStyle','-','DisplayName','CW')
+%     plot(SMW_power_mod(:,i),FundTone_Out_mod(:,i),'LineStyle','--','DisplayName','Mod')
+%     ylim([-10 5])
+%     yticks(-10:1:5)
+%     grid on
+%     legend
+%     pbaspect([1 0.5 0.5])
+%     hold off
+% end
 
 %% plot linearity over freq for a given Pout
-pout_des = 26;
+close all
+pout_des = 24;
 EVM_freq = zeros(1, numel(freq_mod));
 ACPR_L_freq = zeros(1, numel(freq_mod));
 ACPR_U_freq = zeros(1, numel(freq_mod));
 PAE_freq = zeros(1, numel(freq_mod));
+PAE_freq_CW = zeros(1, numel(freq_mod));
 Gain_freq = zeros(1, numel(freq_mod));
 Pout_freq = zeros(1, numel(freq_mod));
-tol = 0.2;
+tol = 0.3;
 for i = 1:numel(freq_mod)
     col = Pout1_mod(:,i);
     col_P = abs((col - pout_des)) < tol;
     if sum(col_P) > 1
-        % tol=0.2;
         diff_vector = abs((col - pout_des));
         smallest = min(diff_vector);
         col_P = abs(diff_vector - smallest) < 1e-6;
@@ -394,7 +432,6 @@ for i = 1:numel(freq_mod)
         col_Pout = Pout1_mod(:,i);
         Pout_freq(i) = col_Pout(col_P);
     elseif sum(col_P) == 1
-        % tol=0.2;
         col_ACPR_L = ACPR_L(:,i);
         ACPR_L_freq(i) = col_ACPR_L(col_P);
         col_ACPR_U = ACPR_U(:,i);
@@ -415,43 +452,136 @@ end
 
 %plot it
 figure
-tiledlayout("flow")
-nexttile
+% tiledlayout("flow")
+% nexttile
 hold on
 title("EVM at " + num2str(pout_des) + " dBm Output Power")
+fname = "EVMvsFreq_at_" + num2str(pout_des) + "_dBm_Pout";
 plot(freq_mod ./ 1e9,EVM_freq)
 grid on
 xlabel("Frequency (GHz)")
 ylabel("EVM (%)")
+set(gcf,'Color','w')
+box on
+pbaspect([1 0.5 0.5])
 hold off
-nexttile
+saveas(gcf,fullfile("figures","pdf",fname+".pdf"))
+saveas(gcf,fullfile("figures","svg",fname+".svg"))
+
+% nexttile
+figure
 hold on
 title("ACPR at " + num2str(pout_des) + " dBm Output Power")
+fname = "ACPRvsFreq_at_" + num2str(pout_des) + "_dBm_Pout";
 plot(freq_mod ./ 1e9,ACPR_U_freq,'DisplayName','ACPR Upper')
 plot(freq_mod ./ 1e9,ACPR_L_freq,'DisplayName','ACPR Lower')
 grid on
 xlabel("Frequency (GHz)")
 ylabel("ACPR (dBc)")
-legend
+legend("Location","best")
+set(gcf,'Color','w')
+box on
+pbaspect([1 0.5 0.5])
 hold off
-nexttile
+saveas(gcf,fullfile("figures","pdf",fname+".pdf"))
+saveas(gcf,fullfile("figures","svg",fname+".svg"))
+
+% nexttile
+figure
 hold on
 title("Gain, PAE at " + num2str(pout_des) + " dBm Output Power")
-yyaxis left
-plot(freq_mod ./ 1e9,Gain_freq,'DisplayName','Gain')
-ylim([14 20]);
-yticks(14:1:20);
-ylabel("Gain (dB)")
-yyaxis right
-plot(freq_mod ./ 1e9,PAE_freq,'DisplayName','PAE')
-ylim([14 20]);
-yticks(14:1:20);
-yticks
+fname = "Gain_PAEvsFreq_at_" + num2str(pout_des) + "_dBm_Pout";
+% yyaxis left
+plot(freq_mod ./ 1e9,Gain_freq,'DisplayName','Gain','LineWidth',2,'Color','r')
+ylim([5 20]);
+yticks(5:1:20);
+ylabel("Gain (dB), PAE (%)")
+% yyaxis right
+plot(freq_mod ./ 1e9,PAE_freq,'DisplayName','PAE','LineWidth',2,'Color','b')
+% ylim([8 20]);
+% yticks(8:2:20);
+% yticks
 grid on
 xlabel("Frequency (GHz)")
-ylabel("PAE (%)")
-legend
+% ylabel("PAE (%)")
+legend("Location","best")
+set(gcf,'Color','w')
+box on
+pbaspect([1 0.5 0.5])
 hold off
+saveas(gcf,fullfile("figures","pdf",fname+".pdf"))
+saveas(gcf,fullfile("figures","svg",fname+".svg"))
+%% Do the same for CW measurements
+
+close all
+pout_des = 24;
+% EVM_freq = zeros(1, numel(freq_mod));
+% ACPR_L_freq = zeros(1, numel(freq_mod));
+% ACPR_U_freq = zeros(1, numel(freq_mod));
+% PAE_freq = zeros(1, numel(freq_mod));
+PAE_freq = zeros(1, numel(freq_cw));
+Gain_freq = zeros(1, numel(freq_cw));
+Pout_freq = zeros(1, numel(freq_cw));
+tol = 0.42;
+for i = 1:numel(freq_cw)
+    col = Pout1(:,i);
+    col_P = abs((col - pout_des)) < tol;
+    if sum(col_P) > 1
+        diff_vector = abs((col - pout_des));
+        smallest = min(diff_vector);
+        col_P = abs(diff_vector - smallest) < 1e-6;
+        % col_ACPR_L = ACPR_L(:,i);
+        % ACPR_L_freq(i) = col_ACPR_L(col_P);
+        % col_ACPR_U = ACPR_U(:,i);
+        % ACPR_U_freq(i) = col_ACPR_U(col_P);
+        % col_EVM = EVM(:,i);
+        % EVM_freq(i) = col_EVM(col_P);
+        col_PAE = PAE1(:,i);
+        PAE_freq(i) = col_PAE(col_P);
+        col_Gain = Gain1(:,i);
+        Gain_freq(i) = col_Gain(col_P);
+        col_Pout = Pout1(:,i);
+        Pout_freq(i) = col_Pout(col_P);
+    elseif sum(col_P) == 1
+        % col_ACPR_L = ACPR_L(:,i);
+        % ACPR_L_freq(i) = col_ACPR_L(col_P);
+        % col_ACPR_U = ACPR_U(:,i);
+        % ACPR_U_freq(i) = col_ACPR_U(col_P);
+        % col_EVM = EVM(:,i);
+        % EVM_freq(i) = col_EVM(col_P);
+        col_PAE = PAE1(:,i);
+        PAE_freq(i) = col_PAE(col_P);
+        col_Gain = Gain1(:,i);
+        Gain_freq(i) = col_Gain(col_P);
+        col_Pout = Pout1(:,i);
+        Pout_freq(i) = col_Pout(col_P);
+    else
+        % tol=tol+0.1;
+        error("no Pout within allowed tolerance")
+    end
+end
+
+%plot it
+
+% nexttile
+figure
+hold on
+title("CW Gain, PAE at " + num2str(pout_des) + " dBm Output Power")
+fname = "Gain_PAEvsFreq_at_" + num2str(pout_des) + "_dBm_Pout_CW";
+plot(freq_cw ./ 1e9,Gain_freq,'DisplayName','Gain','LineWidth',2,'Color','r')
+ylim([9 21]);
+yticks(9:1:21);
+ylabel("Gain (dB), PAE (%)")
+plot(freq_cw ./ 1e9,PAE_freq,'DisplayName','PAE','LineWidth',2,'Color','b')
+grid on
+xlabel("Frequency (GHz)")
+legend("Location","best")
+set(gcf,'Color','w')
+box on
+pbaspect([1 0.5 0.5])
+hold off
+saveas(gcf,fullfile("figures","pdf",fname+".pdf"))
+saveas(gcf,fullfile("figures","svg",fname+".svg"))
 
 %% output coupler power
 
@@ -538,3 +668,37 @@ hold off
 %     legend
 %     hold off
 % end
+
+%% drain efficiency of stage 2
+% close all
+% Pdc_tot2=Pdc_tot2(:,1:numel(freq_cw));
+% DE_s2_v1 = (Pout_watts1./Pdc_tot2(:,1:numel(freq_cw))).*100;
+% %plot at 40 GHz, over output power
+% hold on; box on; grid on; grid minor; set(gcf,'color','w')
+% yyaxis left
+% ylim([0 20])
+% % plot(pdel_ADS,Gain_ADS,'LineStyle','--','DisplayName','Sim Gain')
+% plot(Pout1(:,11),Gain1(:,11),'LineStyle','-','DisplayName','Meas. Gain')
+% % for i = 1:length(freq_cw)-1
+% %     plot(Pout1(:,i),Gain1(:,i),'Color','r','DisplayName',"Gain at "+num2str(freq_cw(i)/1e9)+" GHz")
+% % end
+% ylabel('Gain (dB)')
+% % ylim([4 13])
+% xlim([16 30])
+% yyaxis right
+% ylim([0 36])
+% yticks(0:3:36)
+% % plot(pdel_ADS,PAE_ADS,'LineStyle','--','DisplayName','Sim PAE')
+% plot(Pout1(:,11),DE_s2_v1(:,11),'LineStyle','-','DisplayName','Meas. DE')
+% % for i = 1:length(freq_cw)-1
+% %     plot(Pout1(:,i),PAE1(:,i),'Color','b','DisplayName',"PAE at "+num2str(freq_cw(i)/1e9)+" GHz")
+% % end
+% ylabel('DE (%)')
+% xlabel('Pout (dBm)')
+% % legend("Sim Gain", "Meas Gain1", "Meas Gain2","Meas Gain3","Sim PAE", "Meas PAE1", "Meas PAE2","Meas PAE3")
+% legend("Location","best")
+% title("DE of 2nd Stage vs. Output Power (40 GHz)")
+% pbaspect([1 0.5 0.5])
+% saveas(gcf,fullfile("figures","pdf","DE_2ndStage_vs_pout(40GHz).pdf"))
+% saveas(gcf,fullfile("figures","svg","DE_2ndStage_vs_pout(40GHz).svg"))
+% hold off
